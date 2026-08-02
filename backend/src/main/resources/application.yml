@@ -1,0 +1,72 @@
+spring:
+  application:
+    name: medprep-backend
+  datasource:
+    url: ${SUPABASE_DB_URL}
+    username: ${SUPABASE_DB_USER}
+    password: ${SUPABASE_DB_PASSWORD}
+    driver-class-name: org.postgresql.Driver
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    show-sql: false
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+        format_sql: true
+  servlet:
+    multipart:
+      max-file-size: 50MB
+      max-request-size: 50MB
+server:
+  port: 8080
+
+# Supabase
+supabase:
+  url: ${SUPABASE_URL}
+  anon-key: ${SUPABASE_ANON_KEY}
+  service-key: ${SUPABASE_SERVICE_KEY}
+  storage:
+    bucket-documents: medprep-documents
+
+# AI Provider (configurable: openai | gemini | deepseek)
+ai:
+  provider: ${AI_PROVIDER:openai}
+  openai:
+    api-key: ${OPENAI_API_KEY:}
+    model: gpt-4o-mini
+    base-url: https://api.openai.com/v1
+  gemini:
+    api-key: ${GEMINI_API_KEY:}
+    model: gemini-1.5-flash
+    base-url: https://generativelanguage.googleapis.com/v1beta
+  deepseek:
+    api-key: ${DEEPSEEK_API_KEY:}
+    model: deepseek-chat
+    base-url: https://api.deepseek.com/v1
+
+# SpringDoc / Swagger
+springdoc:
+  api-docs:
+    path: /api-docs
+  swagger-ui:
+    path: /swagger-ui.html
+    enabled: true
+
+# Logging
+logging:
+  level:
+    com.medprep: DEBUG
+    org.springframework.security: INFO
+
+---
+spring:
+  config:
+    activate:
+      on-profile: prod
+  jpa:
+    show-sql: false
+
+logging:
+  level:
+    com.medprep: INFO
