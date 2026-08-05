@@ -1,5 +1,5 @@
 import api from '@/lib/axios'
-import type { ApiResponse, AttemptResponse, Page, Question } from '@/types'
+import type { ApiResponse, AttemptResponse, Difficulty, Page, Question } from '@/types'
 
 export interface QuestionFilters {
   specialtyId?: string
@@ -7,6 +7,22 @@ export interface QuestionFilters {
   difficulty?: string
   page?: number
   size?: number
+}
+
+export interface CreateQuestionPayload {
+  specialtyId: string
+  subspecialtyId?: string
+  stem: string
+  optionA: string
+  optionB: string
+  optionC?: string
+  optionD?: string
+  optionE?: string
+  correctOption: string
+  explanation?: string
+  difficulty: Difficulty
+  source?: string
+  year?: number
 }
 
 export const questionService = {
@@ -36,7 +52,7 @@ export const questionService = {
     return data.data
   },
 
-  create: async (payload: Partial<Question>) => {
+  create: async (payload: CreateQuestionPayload) => {
     const { data } = await api.post<ApiResponse<Question>>('/questions', payload)
     return data.data
   },

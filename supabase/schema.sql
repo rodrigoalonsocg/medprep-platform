@@ -127,6 +127,27 @@ CREATE TABLE IF NOT EXISTS study_sessions (
   ended_at       TIMESTAMPTZ
 );
 
+-- Academias (Gestor de Conocimiento)
+CREATE TABLE IF NOT EXISTS academies (
+  id           UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  name         TEXT NOT NULL,
+  description  TEXT,
+  created_by   UUID REFERENCES user_profiles(id),
+  created_at   TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+-- Documentos / PDFs (almacenados en Supabase Storage)
+CREATE TABLE IF NOT EXISTS documents (
+  id               UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  academy_id       UUID NOT NULL REFERENCES academies(id) ON DELETE CASCADE,
+  uploaded_by      UUID REFERENCES user_profiles(id),
+  file_name        TEXT NOT NULL,
+  storage_path     TEXT NOT NULL,
+  file_size_bytes  BIGINT,
+  is_public        BOOLEAN NOT NULL DEFAULT FALSE,
+  created_at       TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
 -- ============================================================
 -- Índices para performance
 -- ============================================================
@@ -136,6 +157,8 @@ CREATE INDEX IF NOT EXISTS idx_attempts_user          ON question_attempts(user_
 CREATE INDEX IF NOT EXISTS idx_attempts_user_question ON question_attempts(user_id, question_id);
 CREATE INDEX IF NOT EXISTS idx_progress_user          ON user_specialty_progress(user_id);
 CREATE INDEX IF NOT EXISTS idx_flashcards_user        ON flashcards(user_id);
+CREATE INDEX IF NOT EXISTS idx_sessions_user          ON study_sessions(user_id);
+CREATE INDEX IF NOT EXISTS idx_documents_academy      ON documents(academy_id);
 
 -- ============================================================
 -- Row Level Security (RLS)
@@ -174,6 +197,20 @@ CREATE POLICY "flashcards_own" ON flashcards FOR ALL USING (auth.uid() = user_id
 
 -- sesiones: cada usuario solo ve las suyas
 CREATE POLICY "sessions_own" ON study_sessions FOR ALL USING (auth.uid() = user_id);
+
+-- academias: lectura para autenticados; escritura solo admin
+ALTER TABLE academies ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "academies_read"  ON academies FOR SELECT USING (auth.role() = 'authenticated');
+CREATE POLICY "academies_write" ON academies FOR ALL
+  USING ((SELECT role FROM user_profiles WHERE id = auth.uid()) = 'admin');
+
+-- documentos: lectura de públicos o propios; escritura del dueño
+ALTER TABLE documents ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "documents_read"  ON documents FOR SELECT
+  USING (is_public OR auth.uid() = uploaded_by
+         OR (SELECT role FROM user_profiles WHERE id = auth.uid()) = 'admin');
+CREATE POLICY "documents_write" ON documents FOR ALL USING (auth.uid() = uploaded_by
+         OR (SELECT role FROM user_profiles WHERE id = auth.uid()) = 'admin');
 
 -- ============================================================
 -- Datos semilla — especialidades base

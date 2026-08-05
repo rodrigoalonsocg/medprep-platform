@@ -342,11 +342,16 @@ clinical_patterns (
 
 ### Backend (`application.yml`)
 ```yaml
+SUPABASE_DB_URL: jdbc:postgresql://db.xxx.supabase.co:5432/postgres
+SUPABASE_DB_USER: postgres
+SUPABASE_DB_PASSWORD: xxx
 SUPABASE_URL: https://xxx.supabase.co
 SUPABASE_ANON_KEY: xxx
-SUPABASE_SERVICE_KEY: xxx   # Solo backend
-SUPABASE_JWT_SECRET: xxx    # Para validar tokens
+SUPABASE_SERVICE_KEY: xxx   # Solo backend (Storage, operaciones privilegiadas)
+# NOTA: SUPABASE_JWT_SECRET NO se usa. El backend valida el JWT por JWKS/ES256
+#       contra ${SUPABASE_URL}/auth/v1/.well-known/jwks.json (ver JwtConfig).
 AI_PROVIDER: openai          # openai | gemini | deepseek
+APP_CORS_ALLOWED_ORIGINS: http://localhost:5173
 OPENAI_API_KEY: xxx
 GEMINI_API_KEY: xxx
 DEEPSEEK_API_KEY: xxx
@@ -364,10 +369,12 @@ VITE_SUPABASE_ANON_KEY=xxx
 ## Flujo de Autenticación
 
 1. Usuario se registra/loguea vía Supabase Auth (frontend SDK)
-2. Supabase retorna JWT firmado
+2. Supabase retorna JWT firmado (ES256)
 3. Frontend incluye `Authorization: Bearer <token>` en cada request
-4. Backend valida JWT con `SUPABASE_JWT_SECRET` en filtro Spring Security
-5. Extrae `user_id` y `role` del JWT → disponible en contexto de seguridad
+4. Backend valida el JWT vía **JWKS/ES256** (`oauth2ResourceServer`), contra
+   `${SUPABASE_URL}/auth/v1/.well-known/jwks.json`. No usa secreto simétrico.
+5. Extrae `user_id` (claim `sub`) y `role` (`app_metadata.role` / `user_metadata.role`)
+   → disponible en el contexto de seguridad como `@AuthenticationPrincipal`
 
 ---
 
@@ -396,29 +403,35 @@ VITE_SUPABASE_ANON_KEY=xxx
 
 ## Estado del Proyecto
 
-### Fase 1 — Scaffold y Base (En progreso)
+### Fase 1 — Scaffold y Base ✅
 - [x] Estructura de directorios
 - [x] CLAUDE.md
-- [ ] Backend: pom.xml + Spring Boot base
-- [ ] Backend: Entidades JPA + Repositorios
-- [ ] Backend: Auth (JWT filter + Supabase)
-- [ ] Backend: Módulo Q-Bank (CRUD)
-- [ ] Backend: Módulo Progress (Semáforo)
-- [ ] Backend: AI Adapter Layer
-- [ ] Frontend: Setup Vite + Tailwind + shadcn
-- [ ] Frontend: Auth pages (Login/Register)
-- [ ] Frontend: Layout + Router
-- [ ] Frontend: Dashboard
-- [ ] Frontend: Q-Bank UI
-- [ ] Frontend: Semáforo / Analytics
-- [ ] Frontend: Flashcard Generator
+- [x] Backend: pom.xml + Spring Boot base
+- [x] Backend: Entidades JPA + Repositorios
+- [x] Backend: Auth (JWT vía JWKS/ES256 + Supabase)
+- [x] Backend: Módulo Q-Bank (CRUD + Filtro de Erre + simulacro + intentos)
+- [x] Backend: Módulo Progress (Semáforo)
+- [x] Backend: AI Adapter Layer (OpenAI, DeepSeek, Gemini + Stub)
+- [x] Backend: Módulo 1 API de perfil (`/api/v1/me`)
+- [x] Backend: Módulo 7 Workspace (`/api/v1/study-sessions`)
+- [x] Backend: Módulo 2 Academias/Documentos (Supabase Storage)
+- [x] Frontend: Setup Vite + Tailwind
+- [x] Frontend: Auth pages (Login/Register) + carga de perfil
+- [x] Frontend: Layout + Router + guard de rol admin
+- [x] Frontend: Dashboard
+- [x] Frontend: Q-Bank UI (explorar, filtro de erre, simulacro, patrón IA)
+- [x] Frontend: Semáforo / Analytics
+- [x] Frontend: Flashcard Generator + exportación Anki
+- [x] Frontend: Workspace (Pomodoro + registro de sesiones), Academias, Admin
 
 ### Fase 2 — Features IA
-- [ ] Extractor de Keywords (Modo Patrón)
-- [ ] Generador de Flashcards con IA
-- [ ] Análisis cruzado de academias
+- [x] Extractor de Keywords (Modo Patrón)
+- [x] Generador de Flashcards con IA
+- [ ] Análisis cruzado de academias (alerta de contradicción) — pendiente
 
 ### Fase 3 — Deploy y Polish
-- [ ] CI/CD Railway + Vercel
-- [ ] Supabase RLS policies
-- [ ] Tests unitarios + integración
+- [x] CI/CD (GitHub Actions: backend-ci.yml + frontend-ci.yml)
+- [x] Supabase RLS policies (en `supabase/schema.sql`)
+- [x] Tests unitarios (JUnit/Mockito backend, Vitest frontend) — base inicial
+- [ ] Deploy Railway + Vercel (configs listas: Dockerfile, railway.toml, vercel.json)
+- [ ] Mappers MapStruct (actualmente mapeo manual en services)

@@ -1,8 +1,8 @@
 # Backend
 backend/target/
 backend/.env
-backend/.mvn/
 backend/*.log
+# Nota: backend/.mvn/wrapper SÍ se versiona (lo necesita el Dockerfile / Railway)
 
 # Frontend
 frontend/node_modules/

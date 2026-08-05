@@ -1,20 +1,30 @@
 import { useState } from 'react'
 import { useQuery, useMutation } from '@tanstack/react-query'
 import { questionService } from '@/services/question.service'
-import type { Question, AttemptResponse } from '@/types'
-import { CheckCircle2, XCircle, BookOpen, Shuffle } from 'lucide-react'
+import { aiService } from '@/services/ai.service'
+import type { Question, AttemptResponse, PatternDTO } from '@/types'
+import { CheckCircle2, XCircle, BookOpen, Shuffle, Sparkles, Brain, Filter } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
+type Mode = 'browse' | 'errores' | 'simulacro'
+
 export default function QBankPage() {
-  const [mode, setMode] = useState<'browse' | 'simulacro'>('browse')
+  const [mode, setMode] = useState<Mode>('browse')
   const [simulacroQuestions, setSimulacroQuestions] = useState<Question[]>([])
   const [currentIndex, setCurrentIndex] = useState(0)
   const [lastAttempt, setLastAttempt] = useState<AttemptResponse | null>(null)
+  const [flashMsg, setFlashMsg] = useState<string | null>(null)
 
   const { data: questions, isLoading } = useQuery({
     queryKey: ['questions'],
     queryFn: () => questionService.list({ size: 20 }),
     enabled: mode === 'browse',
+  })
+
+  const { data: errorQuestions, isLoading: loadingErrors } = useQuery({
+    queryKey: ['questions', 'errors'],
+    queryFn: () => questionService.getErrorQuestions(),
+    enabled: mode === 'errores',
   })
 
   const startSimulacro = useQuery({
@@ -29,12 +39,19 @@ export default function QBankPage() {
     onSuccess: (data) => setLastAttempt(data),
   })
 
+  const flashcardMutation = useMutation({
+    mutationFn: (questionId: string) => aiService.generateFlashcards(questionId),
+    onSuccess: (cards) => setFlashMsg(`✓ ${cards.length} flashcard(s) generada(s) y guardada(s)`),
+    onError: () => setFlashMsg('No se pudo generar la flashcard (revisa la API de IA)'),
+  })
+
   const handleStartSimulacro = async () => {
     const result = await startSimulacro.refetch()
     if (result.data) {
       setSimulacroQuestions(result.data)
       setCurrentIndex(0)
       setLastAttempt(null)
+      setFlashMsg(null)
       setMode('simulacro')
     }
   }
@@ -46,6 +63,7 @@ export default function QBankPage() {
   }
 
   const handleNext = () => {
+    setFlashMsg(null)
     if (currentIndex < simulacroQuestions.length - 1) {
       setCurrentIndex((i) => i + 1)
       setLastAttempt(null)
@@ -119,24 +137,38 @@ export default function QBankPage() {
             {lastAttempt.explanation && (
               <p className="text-sm">{lastAttempt.explanation}</p>
             )}
-            <button
-              onClick={handleNext}
-              className="mt-3 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground"
-            >
-              {currentIndex < simulacroQuestions.length - 1 ? 'Siguiente →' : 'Finalizar simulacro'}
-            </button>
+            <div className="mt-3 flex flex-wrap gap-2">
+              <button
+                onClick={() => flashcardMutation.mutate(q.id)}
+                disabled={flashcardMutation.isPending}
+                className="flex items-center gap-2 rounded-lg border border-primary bg-white px-4 py-2 text-sm font-medium text-primary disabled:opacity-50"
+              >
+                <Sparkles className="h-4 w-4" />
+                {flashcardMutation.isPending ? 'Generando...' : 'Generar Flashcard (IA)'}
+              </button>
+              <button
+                onClick={handleNext}
+                className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground"
+              >
+                {currentIndex < simulacroQuestions.length - 1 ? 'Siguiente →' : 'Finalizar simulacro'}
+              </button>
+            </div>
+            {flashMsg && <p className="mt-2 text-xs">{flashMsg}</p>}
           </div>
         )}
       </div>
     )
   }
 
+  const list = mode === 'errores' ? errorQuestions : questions
+  const listLoading = mode === 'errores' ? loadingErrors : isLoading
+
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="text-2xl font-bold">Banco de Preguntas</h1>
-          <p className="text-muted-foreground">Practica por especialidad o genera un simulacro</p>
+          <p className="text-muted-foreground">Practica, repasa tus errores o genera un simulacro</p>
         </div>
         <button
           onClick={handleStartSimulacro}
@@ -147,7 +179,18 @@ export default function QBankPage() {
         </button>
       </div>
 
-      {isLoading ? (
+      <div className="flex gap-2 border-b">
+        <TabButton active={mode === 'browse'} onClick={() => setMode('browse')} icon={BookOpen} label="Explorar" />
+        <TabButton active={mode === 'errores'} onClick={() => setMode('errores')} icon={Filter} label="Filtro de Erre" />
+      </div>
+
+      {mode === 'errores' && (
+        <p className="rounded-lg bg-amber-50 p-3 text-sm text-amber-800">
+          Preguntas que fallaste o marcaste como dudosas en las últimas 3 semanas.
+        </p>
+      )}
+
+      {listLoading ? (
         <div className="space-y-3">
           {[...Array(5)].map((_, i) => (
             <div key={i} className="h-20 animate-pulse rounded-lg bg-muted" />
@@ -155,26 +198,89 @@ export default function QBankPage() {
         </div>
       ) : (
         <div className="space-y-3">
-          {questions?.content.map((q) => (
-            <div key={q.id} className="rounded-lg border bg-card p-4">
-              <div className="mb-2 flex items-center gap-2">
-                <span className="rounded-full bg-secondary px-2 py-0.5 text-xs font-medium">{q.specialtyName}</span>
-                <span className={cn(
-                  'rounded-full px-2 py-0.5 text-xs font-medium',
-                  q.difficulty === 'BAJA' ? 'bg-green-100 text-green-800' :
-                  q.difficulty === 'MEDIA' ? 'bg-yellow-100 text-yellow-800' :
-                  'bg-red-100 text-red-800',
-                )}>{q.difficulty}</span>
-              </div>
-              <p className="text-sm">{q.stem.slice(0, 200)}...</p>
-            </div>
+          {list?.content.map((q) => (
+            <QuestionCard key={q.id} question={q} />
           ))}
-          {questions?.content.length === 0 && (
+          {list?.content.length === 0 && (
             <div className="flex flex-col items-center gap-3 rounded-lg border border-dashed p-10 text-center">
               <BookOpen className="h-10 w-10 text-muted-foreground" />
-              <p className="font-medium">No hay preguntas disponibles</p>
-              <p className="text-sm text-muted-foreground">El administrador debe cargar el banco de preguntas.</p>
+              <p className="font-medium">
+                {mode === 'errores' ? 'Sin errores recientes' : 'No hay preguntas disponibles'}
+              </p>
+              <p className="text-sm text-muted-foreground">
+                {mode === 'errores'
+                  ? '¡Bien! No tienes preguntas falladas en las últimas 3 semanas.'
+                  : 'El administrador debe cargar el banco de preguntas.'}
+              </p>
             </div>
+          )}
+        </div>
+      )}
+    </div>
+  )
+}
+
+function TabButton({ active, onClick, icon: Icon, label }: {
+  active: boolean; onClick: () => void; icon: typeof BookOpen; label: string
+}) {
+  return (
+    <button
+      onClick={onClick}
+      className={cn(
+        'flex items-center gap-2 border-b-2 px-3 py-2 text-sm font-medium transition-colors',
+        active ? 'border-primary text-primary' : 'border-transparent text-muted-foreground hover:text-foreground',
+      )}
+    >
+      <Icon className="h-4 w-4" />
+      {label}
+    </button>
+  )
+}
+
+function QuestionCard({ question: q }: { question: Question }) {
+  const [pattern, setPattern] = useState<PatternDTO | null>(null)
+  const analyzeMutation = useMutation({
+    mutationFn: () => aiService.analyzePattern(q.id),
+    onSuccess: (data) => setPattern(data),
+  })
+
+  return (
+    <div className="rounded-lg border bg-card p-4">
+      <div className="mb-2 flex items-center gap-2">
+        <span className="rounded-full bg-secondary px-2 py-0.5 text-xs font-medium">{q.specialtyName}</span>
+        <span className={cn(
+          'rounded-full px-2 py-0.5 text-xs font-medium',
+          q.difficulty === 'BAJA' ? 'bg-green-100 text-green-800' :
+          q.difficulty === 'MEDIA' ? 'bg-yellow-100 text-yellow-800' :
+          'bg-red-100 text-red-800',
+        )}>{q.difficulty}</span>
+      </div>
+      <p className="text-sm">{q.stem.length > 200 ? `${q.stem.slice(0, 200)}...` : q.stem}</p>
+
+      <button
+        onClick={() => analyzeMutation.mutate()}
+        disabled={analyzeMutation.isPending || !!pattern}
+        className="mt-3 flex items-center gap-2 rounded-lg border px-3 py-1.5 text-xs font-medium text-primary hover:bg-accent disabled:opacity-50"
+      >
+        <Brain className="h-3.5 w-3.5" />
+        {analyzeMutation.isPending ? 'Analizando...' : pattern ? 'Patrón analizado' : 'Analizar patrón (IA)'}
+      </button>
+
+      {analyzeMutation.isError && (
+        <p className="mt-2 text-xs text-red-600">No se pudo analizar (revisa la API de IA).</p>
+      )}
+
+      {pattern && (
+        <div className="mt-3 space-y-2 rounded-lg bg-muted/50 p-3 text-xs">
+          <div className="flex flex-wrap gap-1">
+            {pattern.keywords.map((k) => (
+              <span key={k} className="rounded-full bg-primary/10 px-2 py-0.5 text-primary">{k}</span>
+            ))}
+          </div>
+          {pattern.diagnosis && <p><span className="font-semibold">Diagnóstico:</span> {pattern.diagnosis}</p>}
+          {pattern.pearl && <p><span className="font-semibold">Perla:</span> {pattern.pearl}</p>}
+          {pattern.distractors?.length > 0 && (
+            <p><span className="font-semibold">Distractores:</span> {pattern.distractors.join(', ')}</p>
           )}
         </div>
       )}

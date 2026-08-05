@@ -5,6 +5,7 @@ import {
   TrendingUp,
   Layers,
   Timer,
+  GraduationCap,
   ShieldCheck,
 } from 'lucide-react'
 import { useAuthStore } from '@/store/authStore'
@@ -16,6 +17,7 @@ const navItems = [
   { to: '/progreso', label: 'Semáforo Clínico', icon: TrendingUp },
   { to: '/flashcards', label: 'Flashcards', icon: Layers },
   { to: '/workspace', label: 'Workspace', icon: Timer },
+  { to: '/academias', label: 'Academias', icon: GraduationCap },
 ]
 
 export default function Sidebar() {

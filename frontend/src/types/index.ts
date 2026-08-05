@@ -93,3 +93,50 @@ export interface Flashcard {
   isExported: boolean
   createdAt: string
 }
+
+// Respuesta del backend para flashcards (GET /ai/flashcards)
+export interface FlashcardDTO {
+  id: string
+  questionId?: string
+  front: string
+  back: string
+  specialtyName?: string
+  exported: boolean
+  createdAt: string
+}
+
+export interface PatternDTO {
+  questionId: string
+  keywords: string[]
+  diagnosis: string
+  pearl: string
+  distractors: string[]
+}
+
+export type SessionType = 'POMODORO' | 'LIBRE'
+
+export interface StudySessionDTO {
+  id: string
+  specialtyId?: string
+  specialtyName?: string
+  durationMinutes: number
+  sessionType: SessionType
+  startedAt: string
+  endedAt?: string
+}
+
+export interface AcademyDTO {
+  id: string
+  name: string
+  description?: string
+  createdAt: string
+}
+
+export interface DocumentDTO {
+  id: string
+  academyId: string
+  fileName: string
+  fileSizeBytes?: number
+  isPublic: boolean
+  createdAt: string
+}
