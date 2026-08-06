@@ -4,7 +4,7 @@ import { questionService } from '@/services/question.service'
 import { specialtyService } from '@/services/specialty.service'
 import { aiService } from '@/services/ai.service'
 import type { Question, AttemptResponse, PatternDTO } from '@/types'
-import { CheckCircle2, XCircle, BookOpen, Shuffle, Sparkles, Brain, Filter } from 'lucide-react'
+import { CheckCircle2, XCircle, BookOpen, Shuffle, Sparkles, Brain, Filter, Eye } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
 type Mode = 'browse' | 'errores' | 'simulacro'
@@ -282,6 +282,8 @@ function TabButton({ active, onClick, icon: Icon, label }: {
 
 function QuestionCard({ question: q }: { question: Question }) {
   const [pattern, setPattern] = useState<PatternDTO | null>(null)
+  const [expanded, setExpanded] = useState(false)
+  const isLong = q.stem.length > 200
   const analyzeMutation = useMutation({
     mutationFn: () => aiService.analyzePattern(q.id),
     onSuccess: (data) => setPattern(data),
@@ -289,16 +291,28 @@ function QuestionCard({ question: q }: { question: Question }) {
 
   return (
     <div className="rounded-lg border bg-card p-4">
-      <div className="mb-2 flex items-center gap-2">
-        <span className="rounded-full bg-secondary px-2 py-0.5 text-xs font-medium">{q.specialtyName}</span>
-        <span className={cn(
-          'rounded-full px-2 py-0.5 text-xs font-medium',
-          q.difficulty === 'BAJA' ? 'bg-green-100 text-green-800 dark:bg-green-950/50 dark:text-green-300' :
-          q.difficulty === 'MEDIA' ? 'bg-yellow-100 text-yellow-800' :
-          'bg-red-100 text-red-800 dark:bg-red-950/50 dark:text-red-300',
-        )}>{q.difficulty}</span>
+      <div className="mb-2 flex items-start justify-between gap-2">
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="rounded-full bg-secondary px-2 py-0.5 text-xs font-medium">{q.specialtyName}</span>
+          {q.academy && <span className="rounded-full border px-2 py-0.5 text-xs font-medium">{q.academy}</span>}
+          <span className={cn(
+            'rounded-full px-2 py-0.5 text-xs font-medium',
+            q.difficulty === 'BAJA' ? 'bg-green-100 text-green-800 dark:bg-green-950/50 dark:text-green-300' :
+            q.difficulty === 'MEDIA' ? 'bg-yellow-100 text-yellow-800' :
+            'bg-red-100 text-red-800 dark:bg-red-950/50 dark:text-red-300',
+          )}>{q.difficulty}</span>
+        </div>
+        {isLong && (
+          <button
+            onClick={() => setExpanded((v) => !v)}
+            className="flex shrink-0 items-center gap-2 rounded-lg border px-3 py-1.5 text-xs font-medium text-primary hover:bg-accent"
+          >
+            <Eye className="h-3.5 w-3.5" />
+            {expanded ? 'Ver menos' : 'Ver más'}
+          </button>
+        )}
       </div>
-      <p className="text-sm">{q.stem.length > 200 ? `${q.stem.slice(0, 200)}...` : q.stem}</p>
+      <p className="whitespace-pre-line text-sm">{isLong && !expanded ? `${q.stem.slice(0, 200)}...` : q.stem}</p>
 
       <button
         onClick={() => analyzeMutation.mutate()}
