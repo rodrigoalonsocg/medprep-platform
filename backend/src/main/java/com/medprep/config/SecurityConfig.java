@@ -3,16 +3,23 @@ package com.medprep.config;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.core.convert.converter.Converter;
 import org.springframework.http.HttpMethod;
+import org.springframework.security.authentication.AbstractAuthenticationToken;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.config.http.SessionCreationPolicy;
-import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationConverter;
-import org.springframework.security.oauth2.server.resource.authentication.JwtGrantedAuthoritiesConverter;
+import org.springframework.security.core.GrantedAuthority;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.web.cors.CorsConfigurationSource;
+
+import java.util.List;
+import java.util.Map;
 
 @Configuration
 @EnableWebSecurity
@@ -40,35 +47,35 @@ public class SecurityConfig {
                 .build();
     }
 
-    @Bean
-    public JwtAuthenticationConverter jwtAuthConverter() {
-        JwtGrantedAuthoritiesConverter authoritiesConverter = new JwtGrantedAuthoritiesConverter();
-        authoritiesConverter.setAuthoritiesClaimName("app_metadata.role");
-        authoritiesConverter.setAuthorityPrefix("ROLE_");
-
-        JwtAuthenticationConverter converter = new JwtAuthenticationConverter();
-        converter.setJwtGrantedAuthoritiesConverter(jwt -> {
-            // Extrae el rol desde app_metadata o user_metadata
+    /**
+     * Convierte el JWT de Supabase en una autenticación cuyo <b>principal es el
+     * UUID del usuario</b> (claim {@code sub}), de modo que los controllers
+     * puedan usar {@code @AuthenticationPrincipal String userId} directamente.
+     * El rol se extrae de {@code app_metadata.role} (o {@code user_metadata.role}).
+     */
+    private Converter<Jwt, AbstractAuthenticationToken> jwtAuthConverter() {
+        return jwt -> {
             String role = "student";
             try {
-                var appMeta = jwt.getClaimAsMap("app_metadata");
-                if (appMeta != null && appMeta.containsKey("role")) {
+                Map<String, Object> appMeta = jwt.getClaimAsMap("app_metadata");
+                if (appMeta != null && appMeta.get("role") != null) {
                     role = appMeta.get("role").toString();
                 } else {
-                    var userMeta = jwt.getClaimAsMap("user_metadata");
-                    if (userMeta != null && userMeta.containsKey("role")) {
+                    Map<String, Object> userMeta = jwt.getClaimAsMap("user_metadata");
+                    if (userMeta != null && userMeta.get("role") != null) {
                         role = userMeta.get("role").toString();
                     }
                 }
-            } catch (Exception ignored) {}
+            } catch (Exception ignored) {
+                // rol por defecto: student
+            }
 
-            return java.util.List.of(
-                    new org.springframework.security.core.authority.SimpleGrantedAuthority("ROLE_" + role.toUpperCase())
+            List<GrantedAuthority> authorities = List.of(
+                    new SimpleGrantedAuthority("ROLE_" + role.toUpperCase())
             );
-        });
 
-        // El "name" del principal será el UUID del usuario (claim "sub")
-        converter.setPrincipalClaimName("sub");
-        return converter;
+            // principal = sub (UUID); credentials = jwt (por si se necesita el token)
+            return new UsernamePasswordAuthenticationToken(jwt.getSubject(), jwt, authorities);
+        };
     }
 }

@@ -170,15 +170,31 @@ ALTER TABLE user_specialty_progress ENABLE ROW LEVEL SECURITY;
 ALTER TABLE flashcards             ENABLE ROW LEVEL SECURITY;
 ALTER TABLE study_sessions         ENABLE ROW LEVEL SECURITY;
 
+-- Helper: comprueba si el usuario actual es admin SIN disparar RLS.
+-- SECURITY DEFINER hace que la consulta corra como el owner (ignora RLS),
+-- evitando la recursión infinita que ocurre si una política de user_profiles
+-- vuelve a consultar user_profiles.
+CREATE OR REPLACE FUNCTION public.is_admin()
+RETURNS boolean
+LANGUAGE sql
+SECURITY DEFINER
+STABLE
+SET search_path = public
+AS $$
+  SELECT EXISTS (
+    SELECT 1 FROM public.user_profiles WHERE id = auth.uid() AND role = 'admin'
+  );
+$$;
+
 -- user_profiles: cada usuario ve solo su perfil; admin ve todos
 CREATE POLICY "user_profiles_self"   ON user_profiles FOR ALL USING (auth.uid() = id);
 CREATE POLICY "user_profiles_admin"  ON user_profiles FOR SELECT
-  USING ((SELECT role FROM user_profiles WHERE id = auth.uid()) = 'admin');
+  USING (public.is_admin());
 
 -- questions: todos los autenticados leen; solo admin escribe
 CREATE POLICY "questions_read"   ON questions FOR SELECT USING (auth.role() = 'authenticated');
 CREATE POLICY "questions_write"  ON questions FOR ALL
-  USING ((SELECT role FROM user_profiles WHERE id = auth.uid()) = 'admin');
+  USING (public.is_admin());
 
 -- specialties y subspecialties: lectura pública
 ALTER TABLE specialties    ENABLE ROW LEVEL SECURITY;
@@ -202,15 +218,14 @@ CREATE POLICY "sessions_own" ON study_sessions FOR ALL USING (auth.uid() = user_
 ALTER TABLE academies ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "academies_read"  ON academies FOR SELECT USING (auth.role() = 'authenticated');
 CREATE POLICY "academies_write" ON academies FOR ALL
-  USING ((SELECT role FROM user_profiles WHERE id = auth.uid()) = 'admin');
+  USING (public.is_admin());
 
 -- documentos: lectura de públicos o propios; escritura del dueño
 ALTER TABLE documents ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "documents_read"  ON documents FOR SELECT
-  USING (is_public OR auth.uid() = uploaded_by
-         OR (SELECT role FROM user_profiles WHERE id = auth.uid()) = 'admin');
-CREATE POLICY "documents_write" ON documents FOR ALL USING (auth.uid() = uploaded_by
-         OR (SELECT role FROM user_profiles WHERE id = auth.uid()) = 'admin');
+  USING (is_public OR auth.uid() = uploaded_by OR public.is_admin());
+CREATE POLICY "documents_write" ON documents FOR ALL
+  USING (auth.uid() = uploaded_by OR public.is_admin());
 
 -- ============================================================
 -- Datos semilla — especialidades base
