@@ -75,8 +75,15 @@ public class QuestionController {
             @RequestParam(required = false) UUID specialtyId,
             @RequestParam(required = false) UUID subspecialtyId,
             @RequestParam(required = false) Question.Difficulty difficulty,
+            @RequestParam(required = false) String academy,
             @PageableDefault(size = 20) Pageable pageable) {
-        return ApiResponse.ok(questionService.findQuestions(specialtyId, subspecialtyId, difficulty, pageable));
+        return ApiResponse.ok(questionService.findQuestions(specialtyId, subspecialtyId, difficulty, academy, pageable));
+    }
+
+    @GetMapping("/academies")
+    @Operation(summary = "Listar academias distintas del banco (para filtros)")
+    public ApiResponse<List<String>> academies() {
+        return ApiResponse.ok(questionService.listAcademies());
     }
 
     @GetMapping("/errors")

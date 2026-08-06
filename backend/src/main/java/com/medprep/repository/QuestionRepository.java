@@ -23,12 +23,17 @@ public interface QuestionRepository extends JpaRepository<Question, UUID> {
             WHERE (:specialtyId IS NULL OR q.specialty.id = :specialtyId)
             AND (:subspecialtyId IS NULL OR q.subspecialty.id = :subspecialtyId)
             AND (:difficulty IS NULL OR q.difficulty = :difficulty)
+            AND (:academy IS NULL OR q.academy = :academy)
             """)
     Page<Question> findWithFilters(
             @Param("specialtyId") UUID specialtyId,
             @Param("subspecialtyId") UUID subspecialtyId,
             @Param("difficulty") Question.Difficulty difficulty,
+            @Param("academy") String academy,
             Pageable pageable);
+
+    @Query("SELECT DISTINCT q.academy FROM Question q WHERE q.academy IS NOT NULL AND q.academy <> '' ORDER BY q.academy")
+    List<String> findDistinctAcademies();
 
     @Query("""
             SELECT q FROM Question q

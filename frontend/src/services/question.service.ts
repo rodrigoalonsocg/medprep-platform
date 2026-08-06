@@ -5,6 +5,7 @@ export interface QuestionFilters {
   specialtyId?: string
   subspecialtyId?: string
   difficulty?: string
+  academy?: string
   page?: number
   size?: number
 }
@@ -28,6 +29,11 @@ export interface CreateQuestionPayload {
 export const questionService = {
   list: async (filters: QuestionFilters = {}) => {
     const { data } = await api.get<ApiResponse<Page<Question>>>('/questions', { params: filters })
+    return data.data
+  },
+
+  getAcademies: async () => {
+    const { data } = await api.get<ApiResponse<string[]>>('/questions/academies')
     return data.data
   },
 

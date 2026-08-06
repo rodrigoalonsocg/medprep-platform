@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { questionService } from '@/services/question.service'
+import { specialtyService } from '@/services/specialty.service'
 import { aiService } from '@/services/ai.service'
 import type { Question, AttemptResponse, PatternDTO } from '@/types'
 import { CheckCircle2, XCircle, BookOpen, Shuffle, Sparkles, Brain, Filter } from 'lucide-react'
@@ -15,12 +16,22 @@ export default function QBankPage() {
   const [lastAttempt, setLastAttempt] = useState<AttemptResponse | null>(null)
   const [flashMsg, setFlashMsg] = useState<string | null>(null)
   const queryClient = useQueryClient()
+  const [filters, setFilters] = useState<{ specialtyId?: string; academy?: string; difficulty?: string }>({})
+  const [page, setPage] = useState(0)
 
   const { data: questions, isLoading } = useQuery({
-    queryKey: ['questions'],
-    queryFn: () => questionService.list({ size: 20 }),
+    queryKey: ['questions', filters, page],
+    queryFn: () => questionService.list({ size: 5, page, ...filters }),
     enabled: mode === 'browse',
   })
+
+  const { data: specialties } = useQuery({ queryKey: ['specialties'], queryFn: specialtyService.list })
+  const { data: academies } = useQuery({ queryKey: ['academies-list'], queryFn: questionService.getAcademies })
+
+  const setFilter = (k: 'specialtyId' | 'academy' | 'difficulty', v: string) => {
+    setFilters((f) => ({ ...f, [k]: v || undefined }))
+    setPage(0)
+  }
 
   const { data: errorQuestions, isLoading: loadingErrors } = useQuery({
     queryKey: ['questions', 'errors'],
@@ -189,6 +200,25 @@ export default function QBankPage() {
         <TabButton active={mode === 'errores'} onClick={() => setMode('errores')} icon={Filter} label="Filtro de Erre" />
       </div>
 
+      {mode === 'browse' && (
+        <div className="flex flex-wrap gap-2">
+          <select value={filters.specialtyId ?? ''} onChange={(e) => setFilter('specialtyId', e.target.value)} className="rounded-lg border px-3 py-2 text-sm">
+            <option value="">Todas las especialidades</option>
+            {specialties?.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
+          </select>
+          <select value={filters.academy ?? ''} onChange={(e) => setFilter('academy', e.target.value)} className="rounded-lg border px-3 py-2 text-sm">
+            <option value="">Todas las academias</option>
+            {academies?.map((a) => <option key={a} value={a}>{a}</option>)}
+          </select>
+          <select value={filters.difficulty ?? ''} onChange={(e) => setFilter('difficulty', e.target.value)} className="rounded-lg border px-3 py-2 text-sm">
+            <option value="">Toda complejidad</option>
+            <option value="BAJA">Baja</option>
+            <option value="MEDIA">Media</option>
+            <option value="ALTA">Alta</option>
+          </select>
+        </div>
+      )}
+
       {mode === 'errores' && (
         <p className="rounded-lg bg-amber-50 p-3 text-sm text-amber-800 dark:bg-amber-950/40 dark:text-amber-300">
           Preguntas que fallaste o marcaste como dudosas en las últimas 3 semanas.
@@ -219,6 +249,14 @@ export default function QBankPage() {
               </p>
             </div>
           )}
+        </div>
+      )}
+
+      {mode === 'browse' && questions && questions.totalPages > 1 && (
+        <div className="flex items-center justify-center gap-3 pt-2">
+          <button disabled={page === 0} onClick={() => setPage((p) => Math.max(0, p - 1))} className="rounded-lg border px-3 py-1.5 text-sm disabled:opacity-40">Anterior</button>
+          <span className="text-sm text-muted-foreground">Página {questions.number + 1} de {questions.totalPages}</span>
+          <button disabled={page >= questions.totalPages - 1} onClick={() => setPage((p) => p + 1)} className="rounded-lg border px-3 py-1.5 text-sm disabled:opacity-40">Siguiente</button>
         </div>
       )}
     </div>

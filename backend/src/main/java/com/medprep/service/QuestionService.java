@@ -73,10 +73,16 @@ public class QuestionService {
 
     @Transactional(readOnly = true)
     public Page<QuestionResponse> findQuestions(UUID specialtyId, UUID subspecialtyId,
-                                                 Question.Difficulty difficulty, Pageable pageable) {
+                                                 Question.Difficulty difficulty, String academy,
+                                                 Pageable pageable) {
         return questionRepository
-                .findWithFilters(specialtyId, subspecialtyId, difficulty, pageable)
+                .findWithFilters(specialtyId, subspecialtyId, difficulty, academy, pageable)
                 .map(this::toResponse);
+    }
+
+    @Transactional(readOnly = true)
+    public List<String> listAcademies() {
+        return questionRepository.findDistinctAcademies();
     }
 
     @Transactional(readOnly = true)
