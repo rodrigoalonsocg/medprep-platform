@@ -35,6 +35,9 @@ public interface QuestionRepository extends JpaRepository<Question, UUID> {
     @Query("SELECT DISTINCT q.academy FROM Question q WHERE q.academy IS NOT NULL AND q.academy <> '' ORDER BY q.academy")
     List<String> findDistinctAcademies();
 
+    @Query("SELECT q.stem FROM Question q WHERE (:academy IS NULL AND q.academy IS NULL) OR q.academy = :academy")
+    List<String> findStemsByAcademy(@Param("academy") String academy);
+
     @Query("""
             SELECT q FROM Question q
             WHERE q.id IN (

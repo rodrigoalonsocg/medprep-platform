@@ -27,6 +27,7 @@ import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 
@@ -149,15 +150,18 @@ public class AiService {
         Map<String, AiAdapter.ExtractedQuestion> uniq = new LinkedHashMap<>();
         for (AiAdapter.ExtractedQuestion eq : extracted) {
             if (eq.stem() == null || eq.stem().isBlank()) continue;
-            String key = normalize(eq.stem()).replaceAll("\\s+", " ");
-            key = key.length() > 80 ? key.substring(0, 80) : key;
-            uniq.putIfAbsent(key, eq);
+            uniq.putIfAbsent(stemKey(eq.stem()), eq);
         }
-        List<AiAdapter.ExtractedQuestion> questions = new ArrayList<>(uniq.values());
-        if (questions.isEmpty()) {
+        if (uniq.isEmpty()) {
             throw MedPrepException.badRequest(
                     "La IA no detectó preguntas en el PDF. Verifica que el examen tenga preguntas de opción múltiple con sus respuestas.");
         }
+        // Evita duplicar preguntas que YA existen de la misma academia (ediciones repetidas).
+        Set<String> existingKeys = questionRepository.findStemsByAcademy(academy).stream()
+                .filter(java.util.Objects::nonNull).map(AiService::stemKey).collect(java.util.stream.Collectors.toSet());
+        List<AiAdapter.ExtractedQuestion> questions = uniq.values().stream()
+                .filter(eq -> !existingKeys.contains(stemKey(eq.stem())))
+                .collect(java.util.stream.Collectors.toList());
 
         Map<String, Specialty> byName = new HashMap<>();
         specialties.forEach(s -> byName.put(normalize(s.getName()), s));
@@ -252,6 +256,12 @@ public class AiService {
             }
         }
         return all.get(0); // fallback si la IA devolvió algo fuera de la lista
+    }
+
+    /** Clave normalizada del enunciado para detectar duplicados (sin tildes ni símbolos). */
+    private static String stemKey(String stem) {
+        String k = normalize(stem).replaceAll("[^a-z0-9 ]", "").replaceAll("\\s+", " ").trim();
+        return k.length() > 100 ? k.substring(0, 100) : k;
     }
 
     private static String normalize(String s) {

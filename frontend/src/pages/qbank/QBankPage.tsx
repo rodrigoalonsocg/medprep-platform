@@ -4,7 +4,8 @@ import { questionService } from '@/services/question.service'
 import { specialtyService } from '@/services/specialty.service'
 import { aiService } from '@/services/ai.service'
 import type { Question, AttemptResponse, PatternDTO } from '@/types'
-import { CheckCircle2, XCircle, BookOpen, Shuffle, Sparkles, Brain, Filter, Eye } from 'lucide-react'
+import { CheckCircle2, XCircle, BookOpen, Shuffle, Sparkles, Brain, Filter, Trash2 } from 'lucide-react'
+import { useAuthStore } from '@/store/authStore'
 import { cn } from '@/lib/utils'
 
 type Mode = 'browse' | 'errores' | 'simulacro'
@@ -282,11 +283,16 @@ function TabButton({ active, onClick, icon: Icon, label }: {
 
 function QuestionCard({ question: q }: { question: Question }) {
   const [pattern, setPattern] = useState<PatternDTO | null>(null)
-  const [expanded, setExpanded] = useState(false)
-  const isLong = q.stem.length > 200
+  const [confirming, setConfirming] = useState(false)
+  const { isAdmin } = useAuthStore()
+  const queryClient = useQueryClient()
   const analyzeMutation = useMutation({
     mutationFn: () => aiService.analyzePattern(q.id),
     onSuccess: (data) => setPattern(data),
+  })
+  const deleteMutation = useMutation({
+    mutationFn: () => questionService.remove(q.id),
+    onSuccess: () => { setConfirming(false); queryClient.invalidateQueries({ queryKey: ['questions'] }) },
   })
 
   return (
@@ -302,17 +308,36 @@ function QuestionCard({ question: q }: { question: Question }) {
             'bg-red-100 text-red-800 dark:bg-red-950/50 dark:text-red-300',
           )}>{q.difficulty}</span>
         </div>
-        {isLong && (
+        {isAdmin() && (
           <button
-            onClick={() => setExpanded((v) => !v)}
-            className="flex shrink-0 items-center gap-2 rounded-lg border px-3 py-1.5 text-xs font-medium text-primary hover:bg-accent"
+            onClick={() => setConfirming(true)}
+            className="flex shrink-0 items-center gap-2 rounded-lg border px-3 py-1.5 text-xs font-medium text-destructive hover:bg-destructive/10"
           >
-            <Eye className="h-3.5 w-3.5" />
-            {expanded ? 'Ver menos' : 'Ver más'}
+            <Trash2 className="h-3.5 w-3.5" />
+            Eliminar
           </button>
         )}
       </div>
-      <p className="whitespace-pre-line text-sm">{isLong && !expanded ? `${q.stem.slice(0, 200)}...` : q.stem}</p>
+      <p className="whitespace-pre-line text-sm">{q.stem}</p>
+
+      {confirming && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onClick={() => setConfirming(false)}>
+          <div className="w-full max-w-sm rounded-xl border bg-card p-5 shadow-lg" onClick={(e) => e.stopPropagation()}>
+            <h3 className="font-semibold">¿Eliminar esta pregunta?</h3>
+            <p className="mt-1 text-sm text-muted-foreground">Esta acción no se puede deshacer.</p>
+            <div className="mt-4 flex justify-end gap-2">
+              <button onClick={() => setConfirming(false)} className="rounded-lg border px-3 py-1.5 text-sm">Cancelar</button>
+              <button
+                onClick={() => deleteMutation.mutate()}
+                disabled={deleteMutation.isPending}
+                className="rounded-lg bg-destructive px-3 py-1.5 text-sm font-medium text-destructive-foreground disabled:opacity-50"
+              >
+                {deleteMutation.isPending ? 'Eliminando…' : 'Eliminar'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       <button
         onClick={() => analyzeMutation.mutate()}
