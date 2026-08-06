@@ -24,22 +24,39 @@ export default function App() {
         setProfile(null)
         return
       }
-      const { data, error } = await supabase
+      const { data } = await supabase
         .from('user_profiles')
         .select('*')
         .eq('id', session.user.id)
-        .single()
+        .maybeSingle()
 
-      if (error || !data) {
+      let row = data
+      // Si no existe la fila de perfil, la creamos con los datos del registro (auto-reparación).
+      if (!row) {
+        const meta = (session.user.user_metadata ?? {}) as Record<string, string>
+        const { data: created } = await supabase
+          .from('user_profiles')
+          .upsert({
+            id: session.user.id,
+            full_name: meta.full_name || session.user.email,
+            role: meta.role || 'student',
+            university: meta.university || null,
+          })
+          .select('*')
+          .single()
+        row = created
+      }
+
+      if (!row) {
         setProfile(null)
         return
       }
       setProfile({
-        id: data.id,
-        fullName: data.full_name ?? '',
-        role: data.role,
-        university: data.university ?? undefined,
-        createdAt: data.created_at,
+        id: row.id,
+        fullName: row.full_name ?? '',
+        role: row.role,
+        university: row.university ?? undefined,
+        createdAt: row.created_at,
       })
     }
 
