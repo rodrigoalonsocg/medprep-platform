@@ -61,15 +61,15 @@ function SpecialtyCard({ specialtyName, accuracyPercentage, trafficLight, totalA
         </span>
       </div>
 
-      <div className="my-4 flex h-28 items-center justify-center">
-        <ResponsiveContainer width={110} height={110}>
-          <RadialBarChart innerRadius={30} outerRadius={50} data={chartData} startAngle={90} endAngle={-270}>
+      <div className="relative my-4 flex h-44 items-center justify-center">
+        <ResponsiveContainer width={168} height={168}>
+          <RadialBarChart innerRadius={62} outerRadius={80} data={chartData} startAngle={90} endAngle={-270}>
             <PolarAngleAxis type="number" domain={[0, 100]} angleAxisId={0} tick={false} />
-            <RadialBar dataKey="value" cornerRadius={6} background={{ fill: 'rgba(148,163,184,0.25)' }} />
+            <RadialBar dataKey="value" cornerRadius={4} background={{ fill: 'rgba(148,163,184,0.25)' }} />
           </RadialBarChart>
         </ResponsiveContainer>
         <div className="absolute text-center">
-          <p className="text-xl font-bold" style={{ color }}>{formatPercent(accuracyPercentage)}</p>
+          <p className="text-base font-semibold" style={{ color }}>{formatPercent(accuracyPercentage)}</p>
         </div>
       </div>
 
