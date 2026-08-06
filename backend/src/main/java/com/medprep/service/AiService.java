@@ -130,15 +130,20 @@ public class AiService {
         // Trocea el examen en lotes y los procesa EN PARALELO: evita que la
         // respuesta de la IA se trunque (exámenes grandes) y es mucho más rápido.
         List<String> batches = splitIntoBatches(examText, 10);
-        List<AiAdapter.ExtractedQuestion> extracted = batches.stream()
-                .map(batch -> aiAdapter.extractQuestions(batch, names)
-                        .exceptionally(ex -> {
-                            log.warn("Lote falló, se omite: {}", ex.getMessage());
-                            return List.of();
-                        }))
-                .toList().stream()                 // dispara todas antes de esperar
-                .flatMap(f -> f.join().stream())
-                .toList();
+        // Procesa en grupos de 3 llamadas concurrentes para no agotar el rate limit de la IA.
+        List<AiAdapter.ExtractedQuestion> extracted = new ArrayList<>();
+        int concurrency = 3;
+        for (int i = 0; i < batches.size(); i += concurrency) {
+            List<String> group = batches.subList(i, Math.min(i + concurrency, batches.size()));
+            group.stream()
+                    .map(batch -> aiAdapter.extractQuestions(batch, names)
+                            .exceptionally(ex -> {
+                                log.warn("Lote falló, se omite: {}", ex.getMessage());
+                                return List.of();
+                            }))
+                    .toList()                          // dispara el grupo en paralelo
+                    .forEach(f -> extracted.addAll(f.join()));
+        }
         if (extracted.isEmpty()) {
             throw MedPrepException.badRequest(
                     "La IA no detectó preguntas en el PDF. Verifica que el examen tenga preguntas de opción múltiple con sus respuestas.");
