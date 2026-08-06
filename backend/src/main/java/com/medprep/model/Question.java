@@ -61,6 +61,12 @@ public class Question {
 
     private String source;
 
+    /** Academia de origen (Villamedic, CTO, etc.) — permite respuestas distintas por academia. */
+    private String academy;
+
+    /** Subsección/tema dentro de la especialidad (detectado por IA). */
+    private String subsection;
+
     private Integer year;
 
     @JdbcTypeCode(SqlTypes.ARRAY)

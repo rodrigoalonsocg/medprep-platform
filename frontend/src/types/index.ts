@@ -41,6 +41,8 @@ export interface Question {
   explanation?: string
   difficulty: Difficulty
   source?: string
+  academy?: string
+  subsection?: string
   year?: number
   keywords?: string[]
   createdAt: string

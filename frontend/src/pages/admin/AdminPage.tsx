@@ -26,11 +26,12 @@ const difficultyBadge: Record<string, string> = {
 function ExamImporter() {
   const queryClient = useQueryClient()
   const [file, setFile] = useState<File | null>(null)
+  const [academy, setAcademy] = useState('')
   const [result, setResult] = useState<{ imported: number; questions: Question[] } | null>(null)
   const [error, setError] = useState<string | null>(null)
 
   const importMutation = useMutation({
-    mutationFn: () => questionService.importExam(file!),
+    mutationFn: () => questionService.importExam(file!, academy.trim() || undefined),
     onSuccess: (data) => {
       setResult(data)
       setError(null)
@@ -65,6 +66,13 @@ function ExamImporter() {
             </p>
           </div>
         </div>
+
+        <input
+          value={academy}
+          onChange={(e) => setAcademy(e.target.value)}
+          placeholder="Academia de origen (ej. Villamedic, CTO) — opcional"
+          className="w-full rounded-lg border px-3 py-2 text-sm"
+        />
 
         <label className="flex cursor-pointer items-center gap-3 rounded-lg border border-dashed p-4 hover:bg-accent">
           <FileText className="h-5 w-5 text-muted-foreground" />
@@ -102,6 +110,8 @@ function ExamImporter() {
                 <div className="min-w-0">
                   <div className="mb-1 flex flex-wrap items-center gap-2">
                     <span className="rounded-full bg-secondary px-2 py-0.5 text-xs font-medium text-secondary-foreground">{q.specialtyName}</span>
+                    {q.subsection && <span className="rounded-full bg-accent px-2 py-0.5 text-xs font-medium text-accent-foreground">{q.subsection}</span>}
+                    {q.academy && <span className="rounded-full border px-2 py-0.5 text-xs font-medium">{q.academy}</span>}
                     <span className={cn('rounded-full px-2 py-0.5 text-xs font-medium', difficultyBadge[q.difficulty] ?? 'bg-muted')}>{q.difficulty}</span>
                   </div>
                   <p className="truncate text-sm">{q.stem}</p>

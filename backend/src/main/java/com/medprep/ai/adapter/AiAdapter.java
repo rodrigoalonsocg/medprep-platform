@@ -40,7 +40,8 @@ public interface AiAdapter {
             String correctOption,   // "A".."E"
             String explanation,
             String difficulty,      // BAJA | MEDIA | ALTA
-            String specialty        // nombre exacto de una de las especialidades provistas
+            String specialty,       // nombre exacto de una de las especialidades provistas
+            String subsection       // subtema breve (ej. "Cardiología", "Cetoacidosis")
     ) {}
 
     /** Prompt compartido para extraer y clasificar preguntas de un examen. */
@@ -60,8 +61,10 @@ public interface AiAdapter {
                 - Clasifica la pregunta en EXACTAMENTE UNA de estas especialidades (usa el nombre EXACTO):
                   %s
 
+                - Añade "subsection": un subtema breve (ej. "Cardiología", "Cetoacidosis").
+
                 Responde SOLO con JSON válido, sin markdown, con esta estructura EXACTA:
-                {"questions":[{"stem":"...","options":["...","..."],"correctOption":"A","explanation":"...","difficulty":"MEDIA","specialty":"..."}]}
+                {"questions":[{"stem":"...","options":["...","..."],"correctOption":"A","explanation":"...","difficulty":"MEDIA","specialty":"...","subsection":"..."}]}
 
                 Si no encuentras preguntas, responde {"questions":[]}.
 

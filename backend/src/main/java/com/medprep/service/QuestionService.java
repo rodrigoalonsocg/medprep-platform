@@ -165,6 +165,8 @@ public class QuestionService {
                 .explanation(q.getExplanation())
                 .difficulty(q.getDifficulty())
                 .source(q.getSource())
+                .academy(q.getAcademy())
+                .subsection(q.getSubsection())
                 .year(q.getYear())
                 .keywords(q.getKeywords())
                 .createdAt(q.getCreatedAt())

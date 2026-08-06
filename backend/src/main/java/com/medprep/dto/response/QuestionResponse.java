@@ -25,6 +25,8 @@ public class QuestionResponse {
     private String explanation;
     private Question.Difficulty difficulty;
     private String source;
+    private String academy;
+    private String subsection;
     private Integer year;
     private List<String> keywords;
     private Instant createdAt;

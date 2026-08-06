@@ -120,7 +120,7 @@ public class AiService {
      * y se guardan en el banco. Devuelve las preguntas creadas.
      */
     @Transactional
-    public ExamImportResponse importFromExam(String examText, UUID adminId) {
+    public ExamImportResponse importFromExam(String examText, UUID adminId, String academy) {
         List<Specialty> specialties = specialtyRepository.findAll();
         if (specialties.isEmpty()) {
             throw MedPrepException.badRequest("No hay especialidades configuradas en el sistema.");
@@ -190,6 +190,8 @@ public class AiService {
                     .explanation(eq.explanation())
                     .difficulty(difficulty)
                     .source("Importado con IA")
+                    .academy(academy)
+                    .subsection(eq.subsection())
                     .createdBy(creator)
                     .build();
 
@@ -257,6 +259,8 @@ public class AiService {
                 .explanation(q.getExplanation())
                 .difficulty(q.getDifficulty())
                 .source(q.getSource())
+                .academy(q.getAcademy())
+                .subsection(q.getSubsection())
                 .year(q.getYear())
                 .keywords(q.getKeywords())
                 .createdAt(q.getCreatedAt())

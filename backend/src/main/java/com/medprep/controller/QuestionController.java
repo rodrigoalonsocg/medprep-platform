@@ -53,10 +53,11 @@ public class QuestionController {
     @Operation(summary = "Importar examen (PDF): la IA detecta y clasifica las preguntas por especialidad (solo admin)")
     public ApiResponse<ExamImportResponse> importExam(
             @RequestParam("file") MultipartFile file,
+            @RequestParam(value = "academy", required = false) String academy,
             @AuthenticationPrincipal String userId) {
         String text = pdfService.extractText(file);
         pdfService.storeBestEffort(file);
-        ExamImportResponse result = aiService.importFromExam(text, UUID.fromString(userId));
+        ExamImportResponse result = aiService.importFromExam(text, UUID.fromString(userId), academy);
         return ApiResponse.ok(result, "Se importaron " + result.getImported() + " preguntas");
     }
 

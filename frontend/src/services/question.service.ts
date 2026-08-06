@@ -57,9 +57,10 @@ export const questionService = {
     return data.data
   },
 
-  importExam: async (file: File) => {
+  importExam: async (file: File, academy?: string) => {
     const form = new FormData()
     form.append('file', file)
+    if (academy) form.append('academy', academy)
     const { data } = await api.post<ApiResponse<{ imported: number; questions: Question[] }>>(
       '/questions/import',
       form,
