@@ -124,8 +124,8 @@ export default function WorkspacePage() {
             <span key={i} className="absolute rounded-[1px] bg-white/90"
               style={{ top: `${st.top}%`, left: `${st.left}%`, width: st.size, height: st.size }} />
           ))}
-          <div className="absolute bottom-0 left-0 right-0 h-8 bg-slate-800/70" />
           <Dino />
+          <div className="absolute bottom-0 left-0 right-0 h-8 bg-slate-800/70" />
         </div>
       )}
       <div>
@@ -191,44 +191,43 @@ export default function WorkspacePage() {
 }
 
 const DINO = [
-  '.......#####',
-  '......######',
-  '......#.####',
-  '......######',
-  '......#####.',
-  '.......#....',
-  '#.....#####.',
-  '#....######.',
-  '##...######.',
-  '###.#######.',
-  '###########.',
-  '.##########.',
-  '..#########.',
-  '...#######..',
-  '...##.##....',
-  '..###.###...',
+  '.....#####',
+  '.....#.###',
+  '.....#####',
+  '.....####.',
+  '......#...',
+  '#.....###.',
+  '##...####.',
+  '###.#####.',
+  '#########.',
+  '.########.',
+  '..#######.',
+  '...####...',
+  '...#..#...',
+  '..##..##..',
 ]
-const PHRASES = ['¡Tú puedes!', 'Sigue así 💪', 'Enfócate', 'Un paso a la vez', 'Vas muy bien', 'Respira y sigue', '¡Casi lo logras!']
+const PHRASES = ['¡Tú puedes!', 'Sigue así', 'Enfócate', 'Vas muy bien', 'Respira y sigue']
+const SIDEBAR = 272 // no invadir la barra izquierda (w-64)
 
 function Dino() {
-  const [x, setX] = useState(-50)
+  const [x, setX] = useState(SIDEBAR)
   const [greet, setGreet] = useState<string | null>(null)
   const greetRef = useRef<string | null>(null)
 
   useEffect(() => {
     let raf = 0
     let last = performance.now()
-    const speed = 55 // px/s
+    const speed = 42 // px/s
     const loop = (now: number) => {
       const dt = Math.min(0.05, (now - last) / 1000)
       last = now
       if (!greetRef.current) {
-        setX((p) => (p > window.innerWidth + 30 ? -50 : p + speed * dt))
-        if (Math.random() < 0.003) {
+        setX((p) => (p > window.innerWidth + 20 ? SIDEBAR : p + speed * dt))
+        if (Math.random() < 0.0006) { // frases poco frecuentes (no distraer)
           const phrase = PHRASES[Math.floor(Math.random() * PHRASES.length)]
           greetRef.current = phrase
           setGreet(phrase)
-          window.setTimeout(() => { greetRef.current = null; setGreet(null) }, 2600)
+          window.setTimeout(() => { greetRef.current = null; setGreet(null) }, 2200)
         }
       }
       raf = requestAnimationFrame(loop)
@@ -238,14 +237,14 @@ function Dino() {
   }, [])
 
   return (
-    <div className="absolute bottom-8" style={{ left: x }}>
+    <div className="absolute bottom-6" style={{ left: x }}>
       {greet && (
-        <div className="absolute -top-10 left-4 flex flex-col items-center">
-          <div className="whitespace-nowrap rounded-md border-2 border-slate-900 bg-white px-2 py-1 text-[10px] font-bold text-slate-900">{greet}</div>
-          <div className="-mt-1 h-2 w-2 rotate-45 border-b-2 border-r-2 border-slate-900 bg-white" />
+        <div className="absolute -top-9 left-2 flex flex-col items-center opacity-80">
+          <div className="whitespace-nowrap rounded-md border border-slate-900 bg-white px-2 py-0.5 text-[10px] font-semibold text-slate-900">{greet}</div>
+          <div className="-mt-1 h-2 w-2 rotate-45 border-b border-r border-slate-900 bg-white" />
         </div>
       )}
-      <svg width={36} height={48} viewBox="0 0 12 16" shapeRendering="crispEdges" className={greet ? '' : 'dino-walk'}>
+      <svg width={26} height={37} viewBox="0 0 10 14" shapeRendering="crispEdges" className={`opacity-50 ${greet ? '' : 'dino-walk'}`}>
         {DINO.flatMap((row, r) =>
           row.split('').map((c, col) => (c === '#'
             ? <rect key={`${r}-${col}`} x={col} y={r} width={1} height={1} fill="#e5e7eb" />
