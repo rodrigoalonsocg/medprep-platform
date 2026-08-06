@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { Upload, Sparkles, Trash2, Loader2, FileText } from 'lucide-react'
 import { questionService } from '@/services/question.service'
+import api from '@/lib/axios'
 import type { Question } from '@/types'
 import { cn } from '@/lib/utils'
 
@@ -13,6 +14,43 @@ export default function AdminPage() {
         <p className="text-muted-foreground">Importa exámenes con IA para llenar el banco de preguntas</p>
       </div>
       <ExamImporter />
+      <GrantAdmin />
+    </div>
+  )
+}
+
+function GrantAdmin() {
+  const [email, setEmail] = useState('')
+  const [msg, setMsg] = useState<string | null>(null)
+  const m = useMutation({
+    mutationFn: async () => {
+      const { data } = await api.post('/admin/grant', null, { params: { email: email.trim() } })
+      return data.data as string
+    },
+    onSuccess: (t) => { setMsg('✓ ' + t); setEmail('') },
+    onError: () => setMsg('No se pudo. ¿El correo existe y ya se registró?'),
+  })
+  return (
+    <div className="max-w-3xl space-y-3 rounded-xl border bg-card p-6 shadow-sm">
+      <h3 className="font-semibold">Dar acceso de administrador</h3>
+      <p className="text-sm text-muted-foreground">Escribe el correo de un usuario ya registrado para hacerlo admin.</p>
+      <div className="flex gap-2">
+        <input
+          type="email"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+          placeholder="correo@ejemplo.com"
+          className="flex-1 rounded-lg border px-3 py-2 text-sm"
+        />
+        <button
+          onClick={() => { setMsg(null); m.mutate() }}
+          disabled={!email || m.isPending}
+          className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground disabled:opacity-50"
+        >
+          {m.isPending ? 'Aplicando…' : 'Hacer admin'}
+        </button>
+      </div>
+      {msg && <p className="text-sm">{msg}</p>}
     </div>
   )
 }
