@@ -57,10 +57,19 @@ export default function QBankPage() {
     enabled: mode === 'errores',
   })
 
-  const startSimulacro = useQuery({
-    queryKey: ['simulacro'],
-    queryFn: () => questionService.generateSimulacro(undefined, 10),
-    enabled: false,
+  const [simulacroModal, setSimulacroModal] = useState(false)
+  const [simulacroCount, setSimulacroCount] = useState(10)
+
+  const simulacroMutation = useMutation({
+    mutationFn: (count: number) => questionService.generateSimulacro(filters.specialtyId, count),
+    onSuccess: (data) => {
+      setSimulacroQuestions(data)
+      setCurrentIndex(0)
+      setLastAttempt(null)
+      setFlashMsg(null)
+      setMode('simulacro')
+      setSimulacroModal(false)
+    },
   })
 
   const attemptMutation = useMutation({
@@ -79,16 +88,6 @@ export default function QBankPage() {
     onError: () => setFlashMsg('No se pudo iniciar la generación (revisa la API de IA)'),
   })
 
-  const handleStartSimulacro = async () => {
-    const result = await startSimulacro.refetch()
-    if (result.data) {
-      setSimulacroQuestions(result.data)
-      setCurrentIndex(0)
-      setLastAttempt(null)
-      setFlashMsg(null)
-      setMode('simulacro')
-    }
-  }
 
   const handleAnswer = (option: string) => {
     if (lastAttempt) return
@@ -205,7 +204,7 @@ export default function QBankPage() {
           <p className="text-muted-foreground">Practica, repasa tus errores o genera un simulacro</p>
         </div>
         <button
-          onClick={handleStartSimulacro}
+          onClick={() => setSimulacroModal(true)}
           className="flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground"
         >
           <Shuffle className="h-4 w-4" />
@@ -313,6 +312,30 @@ export default function QBankPage() {
                 className="rounded-lg bg-destructive px-3 py-1.5 text-sm font-medium text-destructive-foreground disabled:opacity-50"
               >
                 {bulkDelete.isPending ? 'Eliminando…' : 'Eliminar'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {simulacroModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onClick={() => setSimulacroModal(false)}>
+          <div className="w-full max-w-sm rounded-xl border bg-card p-5 shadow-lg" onClick={(e) => e.stopPropagation()}>
+            <h3 className="font-semibold">Generar simulacro</h3>
+            <p className="mt-1 text-sm text-muted-foreground">¿Cuántas preguntas quieres?</p>
+            <input
+              type="number" min={1} max={100} value={simulacroCount}
+              onChange={(e) => setSimulacroCount(Math.max(1, Math.min(100, Number(e.target.value) || 1)))}
+              className="mt-3 w-full rounded-lg border px-3 py-2 text-sm"
+            />
+            <div className="mt-4 flex justify-end gap-2">
+              <button onClick={() => setSimulacroModal(false)} className="rounded-lg border px-3 py-1.5 text-sm">Cancelar</button>
+              <button
+                onClick={() => simulacroMutation.mutate(simulacroCount)}
+                disabled={simulacroMutation.isPending}
+                className="rounded-lg bg-primary px-3 py-1.5 text-sm font-medium text-primary-foreground disabled:opacity-50"
+              >
+                {simulacroMutation.isPending ? 'Generando…' : 'Generar'}
               </button>
             </div>
           </div>
