@@ -26,7 +26,7 @@
     --ring: 174 72% 33%;
     --radius: 0.7rem;
   }
-  .dark {
+  .dark, .night {
     --background: 200 28% 10%;
     --foreground: 190 20% 92%;
     --card: 200 26% 13%;

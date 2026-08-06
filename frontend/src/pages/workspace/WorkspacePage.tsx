@@ -104,15 +104,29 @@ export default function WorkspacePage() {
     setSecondsLeft(settings.durations[mode] * 60)
   }
 
+  // Modo noche en TODA la página (sidebar incluido) mientras corre
+  useEffect(() => {
+    document.documentElement.classList.toggle('night', running)
+    return () => document.documentElement.classList.remove('night')
+  }, [running])
+
   const mm = String(Math.floor(secondsLeft / 60)).padStart(2, '0')
   const ss = String(secondsLeft % 60).padStart(2, '0')
-  const night = running
 
   const setDuration = (m: Mode, v: number) =>
     setSettings((s) => ({ ...s, durations: { ...s.durations, [m]: Math.max(1, Math.min(180, v || 1)) } }))
 
   return (
     <div className="mx-auto max-w-xl space-y-6">
+      {running && (
+        <div className="pointer-events-none fixed inset-0 z-40">
+          {stars.map((st, i) => (
+            <span key={i} className="absolute rounded-[1px] bg-white/90"
+              style={{ top: `${st.top}%`, left: `${st.left}%`, width: st.size, height: st.size }} />
+          ))}
+          <div className="absolute bottom-0 left-0 right-0 h-8 bg-slate-800/70" />
+        </div>
+      )}
       <div>
         <h1 className="text-2xl font-bold">Pomodoro</h1>
         <p className="text-muted-foreground">Enfócate con bloques de tiempo. Esta semana: {stats?.minutesThisWeek ?? 0} min.</p>
@@ -135,23 +149,15 @@ export default function WorkspacePage() {
       </div>
 
       {/* Temporizador (fondo nocturno al correr) */}
-      <div className={cn('relative overflow-hidden rounded-2xl border p-10 text-center transition-colors',
-        night ? 'border-slate-700 bg-slate-950' : 'bg-card')}>
-        {night && stars.map((st, i) => (
-          <span key={i} className="absolute rounded-[1px] bg-white/90"
-            style={{ top: `${st.top}%`, left: `${st.left}%`, width: st.size, height: st.size }} />
-        ))}
-        {night && <div className="absolute bottom-0 left-0 right-0 h-6 bg-slate-800" />}
-        <div className={cn('relative font-mono text-7xl font-bold tabular-nums', night && 'text-white')}>
-          {mm}:{ss}
-        </div>
-        <div className="relative mt-6 flex justify-center gap-3">
+      <div className="relative z-30 overflow-hidden rounded-2xl border bg-card p-10 text-center">
+        <div className="font-mono text-7xl font-bold tabular-nums">{mm}:{ss}</div>
+        <div className="mt-6 flex justify-center gap-3">
           <button onClick={running ? () => setRunning(false) : start}
             className="flex items-center gap-2 rounded-lg bg-primary px-6 py-2.5 font-medium text-primary-foreground">
             {running ? <><Pause className="h-4 w-4" /> Pausar</> : <><Play className="h-4 w-4" /> Iniciar</>}
           </button>
           <button onClick={reset}
-            className={cn('flex items-center gap-2 rounded-lg border px-4 py-2.5 text-sm', night && 'border-slate-600 text-white')}>
+            className="flex items-center gap-2 rounded-lg border px-4 py-2.5 text-sm">
             <RotateCcw className="h-4 w-4" /> Reiniciar
           </button>
         </div>
