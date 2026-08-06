@@ -20,7 +20,19 @@ export default function MusicPlayer() {
 
   return (
     <>
-      <audio ref={audioRef} src="/piano.mp3" loop preload="auto" />
+      <audio
+        ref={audioRef}
+        src="/piano.mp3"
+        loop
+        preload="auto"
+        onEnded={() => {
+          const a = audioRef.current
+          if (a && playing) {
+            a.currentTime = 0
+            a.play().catch(() => {})
+          }
+        }}
+      />
       <button
         onClick={toggle}
         title={playing ? 'Pausar música' : 'Música de piano'}
