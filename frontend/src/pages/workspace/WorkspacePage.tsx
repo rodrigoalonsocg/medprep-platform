@@ -35,6 +35,7 @@ export default function WorkspacePage() {
   const [secondsLeft, setSecondsLeft] = useState(settings.durations.pomodoro * 60)
   const [running, setRunning] = useState(false)
   const audioRef = useRef<HTMLAudioElement>(null)
+  const pomodoroCount = useRef(0)
 
   const { data: stats, refetch: refetchStats } = useQuery({
     queryKey: ['study-stats'],
@@ -77,7 +78,8 @@ export default function WorkspacePage() {
     if (mode === 'pomodoro') {
       studyService.create({ durationMinutes: settings.durations.pomodoro, sessionType: 'POMODORO' })
         .then(() => refetchStats()).catch(() => {})
-      switchTo('short', settings.autoStartBreaks)
+      pomodoroCount.current += 1
+      switchTo(pomodoroCount.current % 4 === 0 ? 'long' : 'short', settings.autoStartBreaks)
     } else {
       switchTo('pomodoro', settings.autoStartPomodoros)
     }
