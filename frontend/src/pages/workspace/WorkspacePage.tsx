@@ -125,6 +125,7 @@ export default function WorkspacePage() {
               style={{ top: `${st.top}%`, left: `${st.left}%`, width: st.size, height: st.size }} />
           ))}
           <div className="absolute bottom-0 left-0 right-0 h-8 bg-slate-800/70" />
+          <Dino />
         </div>
       )}
       <div>
@@ -185,6 +186,72 @@ export default function WorkspacePage() {
       </div>
 
       <audio ref={audioRef} src="/bell.mp3" preload="auto" />
+    </div>
+  )
+}
+
+const DINO = [
+  '.......#####',
+  '......######',
+  '......#.####',
+  '......######',
+  '......#####.',
+  '.......#....',
+  '#.....#####.',
+  '#....######.',
+  '##...######.',
+  '###.#######.',
+  '###########.',
+  '.##########.',
+  '..#########.',
+  '...#######..',
+  '...##.##....',
+  '..###.###...',
+]
+const PHRASES = ['¡Tú puedes!', 'Sigue así 💪', 'Enfócate', 'Un paso a la vez', 'Vas muy bien', 'Respira y sigue', '¡Casi lo logras!']
+
+function Dino() {
+  const [x, setX] = useState(-50)
+  const [greet, setGreet] = useState<string | null>(null)
+  const greetRef = useRef<string | null>(null)
+
+  useEffect(() => {
+    let raf = 0
+    let last = performance.now()
+    const speed = 55 // px/s
+    const loop = (now: number) => {
+      const dt = Math.min(0.05, (now - last) / 1000)
+      last = now
+      if (!greetRef.current) {
+        setX((p) => (p > window.innerWidth + 30 ? -50 : p + speed * dt))
+        if (Math.random() < 0.003) {
+          const phrase = PHRASES[Math.floor(Math.random() * PHRASES.length)]
+          greetRef.current = phrase
+          setGreet(phrase)
+          window.setTimeout(() => { greetRef.current = null; setGreet(null) }, 2600)
+        }
+      }
+      raf = requestAnimationFrame(loop)
+    }
+    raf = requestAnimationFrame(loop)
+    return () => cancelAnimationFrame(raf)
+  }, [])
+
+  return (
+    <div className="absolute bottom-8" style={{ left: x }}>
+      {greet && (
+        <div className="absolute -top-10 left-4 flex flex-col items-center">
+          <div className="whitespace-nowrap rounded-md border-2 border-slate-900 bg-white px-2 py-1 text-[10px] font-bold text-slate-900">{greet}</div>
+          <div className="-mt-1 h-2 w-2 rotate-45 border-b-2 border-r-2 border-slate-900 bg-white" />
+        </div>
+      )}
+      <svg width={36} height={48} viewBox="0 0 12 16" shapeRendering="crispEdges" className={greet ? '' : 'dino-walk'}>
+        {DINO.flatMap((row, r) =>
+          row.split('').map((c, col) => (c === '#'
+            ? <rect key={`${r}-${col}`} x={col} y={r} width={1} height={1} fill="#e5e7eb" />
+            : null)),
+        )}
+      </svg>
     </div>
   )
 }
