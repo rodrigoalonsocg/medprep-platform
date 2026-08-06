@@ -55,6 +55,12 @@
   }
   body {
     @apply bg-background text-foreground;
+    font-family: 'Montserrat', ui-sans-serif, sans-serif;
+    font-weight: 500;
     font-feature-settings: "rlig" 1, "calt" 1;
+  }
+  /* Fuerza Montserrat también en controles de formulario (no heredan por defecto) */
+  input, button, select, textarea, optgroup {
+    font-family: 'Montserrat', ui-sans-serif, sans-serif;
   }
 }
