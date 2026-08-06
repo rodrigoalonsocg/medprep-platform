@@ -11,7 +11,6 @@ import QBankPage from '@/pages/qbank/QBankPage'
 import ProgressPage from '@/pages/progress/ProgressPage'
 import FlashcardsPage from '@/pages/flashcards/FlashcardsPage'
 import WorkspacePage from '@/pages/workspace/WorkspacePage'
-import AcademiesPage from '@/pages/academies/AcademiesPage'
 import AdminPage from '@/pages/admin/AdminPage'
 import ProtectedRoute from '@/components/shared/ProtectedRoute'
 import AdminRoute from '@/components/shared/AdminRoute'
@@ -71,7 +70,6 @@ export default function App() {
           <Route path="/progreso" element={<ProgressPage />} />
           <Route path="/flashcards" element={<FlashcardsPage />} />
           <Route path="/workspace" element={<WorkspacePage />} />
-          <Route path="/academias" element={<AcademiesPage />} />
           <Route element={<AdminRoute />}>
             <Route path="/admin" element={<AdminPage />} />
           </Route>

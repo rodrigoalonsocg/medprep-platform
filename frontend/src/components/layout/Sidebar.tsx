@@ -5,7 +5,6 @@ import {
   Activity,
   Layers,
   Timer,
-  GraduationCap,
   ShieldCheck,
   Stethoscope,
 } from 'lucide-react'
@@ -18,7 +17,6 @@ const navItems = [
   { to: '/banco-preguntas', label: 'Banco de Preguntas', icon: BookOpen },
   { to: '/flashcards', label: 'Flashcards', icon: Layers },
   { to: '/workspace', label: 'Workspace', icon: Timer },
-  { to: '/academias', label: 'Academias', icon: GraduationCap },
 ]
 
 const linkClass = ({ isActive }: { isActive: boolean }) =>
