@@ -40,12 +40,7 @@ export default function Sidebar() {
         <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-white/15 ring-1 ring-white/25">
           <Stethoscope className="h-5 w-5" />
         </div>
-        <div className="leading-tight">
-          <p className="text-lg font-bold tracking-tight">MedPrep</p>
-          <p className="text-[11px] font-medium text-primary-foreground/80">
-            Preparación ENAM / EsSalud
-          </p>
-        </div>
+        <p className="text-xl font-bold tracking-tight">MedPrep</p>
       </div>
 
       <nav className="flex-1 space-y-1 p-3">
