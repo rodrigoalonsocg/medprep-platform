@@ -125,7 +125,7 @@ export default function WorkspacePage() {
               style={{ top: `${st.top}%`, left: `${st.left}%`, width: st.size, height: st.size }} />
           ))}
           <Dino />
-          <div className="absolute bottom-0 right-0 h-8 bg-slate-800/70" style={{ left: SIDEBAR }} />
+          <div className="absolute bottom-0 left-0 right-0 h-8 bg-slate-800/70 lg:left-64" />
         </div>
       )}
       <div>
@@ -207,7 +207,8 @@ const DINO = [
   '..##..##..',
 ]
 const PHRASES = ['¡Tú puedes!', 'Sigue así', 'Enfócate', 'Vas muy bien', 'Respira y sigue']
-const SIDEBAR = 272 // no invadir la barra izquierda (w-64)
+// No invadir la barra izquierda en desktop (w-64 = 256px); en móvil no hay sidebar fija.
+const SIDEBAR = typeof window !== 'undefined' && window.matchMedia('(min-width:1024px)').matches ? 264 : 8
 
 function Dino() {
   const [x, setX] = useState(SIDEBAR)

@@ -1,10 +1,10 @@
 import { useState } from 'react'
-import { LogOut, Moon, Sun } from 'lucide-react'
+import { LogOut, Menu, Moon, Sun } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { useAuthStore } from '@/store/authStore'
 import { Button } from '@/components/ui/button'
 
-export default function Topbar() {
+export default function Topbar({ onMenuClick }: { onMenuClick: () => void }) {
   const { profile } = useAuthStore()
   const [dark, setDark] = useState(() => document.documentElement.classList.contains('dark'))
 
@@ -22,13 +22,16 @@ export default function Topbar() {
   }
 
   return (
-    <header className="flex h-16 items-center justify-between border-b bg-card px-6">
-      <div />
-      <div className="flex items-center gap-3">
+    <header className="flex h-16 items-center justify-between border-b bg-card px-4 sm:px-6">
+      <Button variant="ghost" size="icon" className="lg:hidden" onClick={onMenuClick} aria-label="Abrir menú">
+        <Menu className="h-5 w-5" />
+      </Button>
+      <div className="hidden lg:block" />
+      <div className="flex items-center gap-2 sm:gap-3">
         <Button variant="ghost" size="icon" onClick={toggleTheme} title="Modo oscuro/claro">
           {dark ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
         </Button>
-        <span className="text-sm font-medium">{profile?.fullName ?? 'Cargando...'}</span>
+        <span className="hidden truncate text-sm font-medium sm:inline">{profile?.fullName ?? 'Cargando...'}</span>
         <Button variant="ghost" size="icon" onClick={handleLogout}>
           <LogOut className="h-4 w-4" />
         </Button>
