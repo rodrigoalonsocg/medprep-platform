@@ -41,7 +41,7 @@ public class OpenAiAdapter implements AiAdapter {
                                                                          String correctAnswer,
                                                                          String explanation) {
         String prompt = buildFlashcardPrompt(questionStem, correctAnswer, explanation);
-        return callChatCompletion(prompt).thenApply(this::parseFlashcards);
+        return callChatCompletion(prompt, 350).thenApply(this::parseFlashcards);
     }
 
     @Override
@@ -93,8 +93,8 @@ public class OpenAiAdapter implements AiAdapter {
 
     private String buildFlashcardPrompt(String stem, String answer, String explanation) {
         return """
-                Genera 2-3 flashcards médicas a partir de esta pregunta. Responde en JSON:
-                {"flashcards": [{"front": "pregunta concisa", "back": "respuesta directa"}]}
+                Genera EXACTAMENTE 2 flashcards médicas MUY concisas (una línea cada lado).
+                Responde solo JSON: {"flashcards": [{"front": "pregunta breve", "back": "respuesta directa"}]}
 
                 Enunciado: %s
                 Respuesta correcta: %s
