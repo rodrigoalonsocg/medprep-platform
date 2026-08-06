@@ -52,6 +52,13 @@ public interface AiAdapter {
                 A continuación tienes el TEXTO de un examen con preguntas de opción múltiple
                 que YA incluyen la respuesta correcta.
 
+                IMPORTANTE:
+                - Extrae ABSOLUTAMENTE TODAS las preguntas que encuentres, sin omitir ninguna.
+                - El PDF puede cortar una pregunta en varias líneas o páginas (enunciado,
+                  alternativas y respuesta separados). RECONSTRUYE cada pregunta juntando
+                  sus partes aunque estén dispersas en el texto.
+                - Si una pregunta está incompleta o cortada, inclúyela igual con lo que haya.
+
                 Tu tarea: detectar CADA pregunta y devolverla estructurada. Para cada una:
                 - Extrae el enunciado (caso clínico) completo.
                 - Extrae las opciones en orden (A, B, C, D, E). Puede haber de 2 a 5.

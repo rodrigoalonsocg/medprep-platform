@@ -24,6 +24,7 @@ import java.text.Normalizer;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -129,7 +130,7 @@ public class AiService {
 
         // Trocea el examen en lotes y los procesa EN PARALELO: evita que la
         // respuesta de la IA se trunque (exámenes grandes) y es mucho más rápido.
-        List<String> batches = splitIntoBatches(examText, 10);
+        List<String> batches = splitIntoBatches(examText, 5);
         // Procesa en grupos de 3 llamadas concurrentes para no agotar el rate limit de la IA.
         List<AiAdapter.ExtractedQuestion> extracted = new ArrayList<>();
         int concurrency = 3;
@@ -144,7 +145,16 @@ public class AiService {
                     .toList()                          // dispara el grupo en paralelo
                     .forEach(f -> extracted.addAll(f.join()));
         }
-        if (extracted.isEmpty()) {
+        // Deduplica por enunciado (el solape entre lotes puede repetir preguntas).
+        Map<String, AiAdapter.ExtractedQuestion> uniq = new LinkedHashMap<>();
+        for (AiAdapter.ExtractedQuestion eq : extracted) {
+            if (eq.stem() == null || eq.stem().isBlank()) continue;
+            String key = normalize(eq.stem()).replaceAll("\\s+", " ");
+            key = key.length() > 80 ? key.substring(0, 80) : key;
+            uniq.putIfAbsent(key, eq);
+        }
+        List<AiAdapter.ExtractedQuestion> questions = new ArrayList<>(uniq.values());
+        if (questions.isEmpty()) {
             throw MedPrepException.badRequest(
                     "La IA no detectó preguntas en el PDF. Verifica que el examen tenga preguntas de opción múltiple con sus respuestas.");
         }
@@ -157,7 +167,7 @@ public class AiService {
         UUID creator = userProfileRepository.existsById(adminId) ? adminId : null;
 
         List<QuestionResponse> saved = new ArrayList<>();
-        for (AiAdapter.ExtractedQuestion eq : extracted) {
+        for (AiAdapter.ExtractedQuestion eq : questions) {
             if (eq.stem() == null || eq.stem().isBlank()
                     || eq.options() == null || eq.options().size() < 2) {
                 continue;
@@ -198,22 +208,30 @@ public class AiService {
             saved.add(toQuestionResponse(questionRepository.save(q)));
         }
 
-        log.info("Importación de examen: {} preguntas guardadas de {} detectadas", saved.size(), extracted.size());
+        log.info("Importación de examen: {} preguntas guardadas de {} detectadas", saved.size(), questions.size());
         return new ExamImportResponse(saved.size(), saved);
     }
 
-    /** Trocea el texto por preguntas ("Pregunta N"); si no hay marcador, por tamaño. */
+    /**
+     * Trocea el texto por preguntas usando varios formatos de numeración
+     * ("Pregunta N", "N.", "N)", "PNNN"). Si no reconoce marcadores, trocea por
+     * tamaño con SOLAPE, para que una pregunta partida entre trozos aparezca
+     * completa en al menos uno (el deduplicado quita las repetidas).
+     */
     private static List<String> splitIntoBatches(String text, int perBatch) {
-        List<String> blocks = Arrays.stream(text.split("(?=Pregunta\\s+\\d+)"))
+        String marker = "(?m)(?=^\\s{0,4}(?:Pregunta\\s+\\d+\\b|\\d{1,3}\\s*[.)]\\s|P\\d{2,4}\\b))";
+        List<String> blocks = Arrays.stream(text.split(marker))
                 .map(String::trim).filter(s -> !s.isBlank()).toList();
         List<String> batches = new ArrayList<>();
-        if (blocks.size() > 1) {
+        if (blocks.size() >= 3) {
             for (int i = 0; i < blocks.size(); i += perBatch) {
                 batches.add(String.join("\n\n", blocks.subList(i, Math.min(i + perBatch, blocks.size()))));
             }
         } else {
-            for (int i = 0; i < text.length(); i += 9000) {
-                batches.add(text.substring(i, Math.min(i + 9000, text.length())));
+            int window = 7000, step = 5500; // ~1500 de solape
+            for (int i = 0; i < text.length(); i += step) {
+                batches.add(text.substring(i, Math.min(i + window, text.length())));
+                if (i + window >= text.length()) break;
             }
         }
         return batches;

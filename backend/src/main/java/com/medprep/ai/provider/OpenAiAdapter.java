@@ -48,7 +48,7 @@ public class OpenAiAdapter implements AiAdapter {
     public CompletableFuture<List<ExtractedQuestion>> extractQuestions(String examText,
                                                                         List<String> specialtyNames) {
         String prompt = AiAdapter.buildExtractPrompt(examText, specialtyNames);
-        return callChatCompletion(prompt, 8192).thenApply(AiAdapter::parseExtractedJson);
+        return callChatCompletion(prompt, 16000).thenApply(AiAdapter::parseExtractedJson);
     }
 
     private CompletableFuture<String> callChatCompletion(String prompt) {
