@@ -69,9 +69,9 @@ export default function DashboardPage() {
         </div>
       )}
 
-      {/* Semáforo por especialidad */}
+      {/* Progreso por especialidad */}
       <div>
-        <h2 className="mb-4 text-lg font-semibold">Semáforo Clínico</h2>
+        <h2 className="mb-4 text-lg font-semibold">Mi Progreso</h2>
         {isLoading ? (
           <div className="space-y-2">
             {[...Array(4)].map((_, i) => (

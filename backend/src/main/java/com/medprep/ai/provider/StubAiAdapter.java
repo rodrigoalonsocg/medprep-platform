@@ -25,4 +25,11 @@ public class StubAiAdapter implements AiAdapter {
                 MedPrepException.badRequest("No hay proveedor de IA configurado. Configura AI_PROVIDER y la API key correspondiente.")
         );
     }
+
+    @Override
+    public CompletableFuture<List<ExtractedQuestion>> extractQuestions(String examText, List<String> specialtyNames) {
+        return CompletableFuture.failedFuture(
+                MedPrepException.badRequest("No hay proveedor de IA configurado. Configura AI_PROVIDER y la API key correspondiente.")
+        );
+    }
 }

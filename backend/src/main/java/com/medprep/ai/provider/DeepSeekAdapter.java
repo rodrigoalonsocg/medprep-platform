@@ -42,6 +42,12 @@ public class DeepSeekAdapter implements AiAdapter {
         return call(buildFlashcardPrompt(stem, answer, explanation)).thenApply(this::parseFlashcards);
     }
 
+    @Override
+    public CompletableFuture<List<ExtractedQuestion>> extractQuestions(String examText, List<String> specialtyNames) {
+        return call(AiAdapter.buildExtractPrompt(examText, specialtyNames))
+                .thenApply(AiAdapter::parseExtractedJson);
+    }
+
     private CompletableFuture<String> call(String prompt) {
         String body = """
                 {"model":"%s","messages":[{"role":"system","content":"Eres un tutor experto en medicina para el internado médico peruano. Responde siempre en JSON válido sin texto adicional."},{"role":"user","content":"%s"}],"temperature":0.3}

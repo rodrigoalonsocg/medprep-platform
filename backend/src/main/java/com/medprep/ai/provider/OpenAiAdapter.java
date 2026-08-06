@@ -44,7 +44,18 @@ public class OpenAiAdapter implements AiAdapter {
         return callChatCompletion(prompt).thenApply(this::parseFlashcards);
     }
 
+    @Override
+    public CompletableFuture<List<ExtractedQuestion>> extractQuestions(String examText,
+                                                                        List<String> specialtyNames) {
+        String prompt = AiAdapter.buildExtractPrompt(examText, specialtyNames);
+        return callChatCompletion(prompt, 8192).thenApply(AiAdapter::parseExtractedJson);
+    }
+
     private CompletableFuture<String> callChatCompletion(String prompt) {
+        return callChatCompletion(prompt, 1024);
+    }
+
+    private CompletableFuture<String> callChatCompletion(String prompt, int maxTokens) {
         var body = java.util.Map.of(
                 "model", model,
                 "messages", java.util.List.of(
@@ -52,7 +63,9 @@ public class OpenAiAdapter implements AiAdapter {
                                 "content", "Eres un tutor experto en medicina para el internado médico peruano. Responde siempre en JSON válido sin texto adicional."),
                         java.util.Map.of("role", "user", "content", prompt)
                 ),
-                "temperature", 0.3
+                "temperature", 0.2,
+                "max_tokens", maxTokens,
+                "response_format", java.util.Map.of("type", "json_object")
         );
         return webClient.post()
                 .uri("/chat/completions")

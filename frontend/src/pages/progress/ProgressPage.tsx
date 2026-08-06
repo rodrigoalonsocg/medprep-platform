@@ -2,6 +2,7 @@ import { useQuery } from '@tanstack/react-query'
 import { progressService } from '@/services/progress.service'
 import { formatPercent, trafficLightBg } from '@/lib/utils'
 import { RadialBarChart, RadialBar, ResponsiveContainer, PolarAngleAxis } from 'recharts'
+import { Activity } from 'lucide-react'
 
 export default function ProgressPage() {
   const { data: progress = [], isLoading } = useQuery({
@@ -11,9 +12,14 @@ export default function ProgressPage() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold">Semáforo Clínico</h1>
-        <p className="text-muted-foreground">Tu rendimiento por especialidad en tiempo real</p>
+      <div className="flex items-center gap-3">
+        <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-primary/10 text-primary">
+          <Activity className="h-6 w-6" />
+        </div>
+        <div>
+          <h1 className="text-2xl font-bold">Mi Progreso</h1>
+          <p className="text-muted-foreground">Tu rendimiento por especialidad en tiempo real</p>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">

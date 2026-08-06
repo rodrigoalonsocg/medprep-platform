@@ -1,16 +1,15 @@
 import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { ShieldCheck, Plus, Upload } from 'lucide-react'
-import { specialtyService } from '@/services/specialty.service'
-import { questionService, type CreateQuestionPayload } from '@/services/question.service'
+import { ShieldCheck, Plus, Upload, Sparkles, Trash2, Loader2, FileText } from 'lucide-react'
 import { academyService } from '@/services/academy.service'
-import type { Difficulty } from '@/types'
+import { questionService } from '@/services/question.service'
+import type { Question } from '@/types'
 import { cn } from '@/lib/utils'
 
-type Tab = 'question' | 'academies'
+type Tab = 'import' | 'academies'
 
 export default function AdminPage() {
-  const [tab, setTab] = useState<Tab>('question')
+  const [tab, setTab] = useState<Tab>('import')
 
   return (
     <div className="space-y-6">
@@ -21,10 +20,10 @@ export default function AdminPage() {
 
       <div className="flex gap-2 border-b">
         <button
-          onClick={() => setTab('question')}
+          onClick={() => setTab('import')}
           className={cn('border-b-2 px-3 py-2 text-sm font-medium',
-            tab === 'question' ? 'border-primary text-primary' : 'border-transparent text-muted-foreground')}
-        >Cargar pregunta</button>
+            tab === 'import' ? 'border-primary text-primary' : 'border-transparent text-muted-foreground')}
+        >Importar examen (IA)</button>
         <button
           onClick={() => setTab('academies')}
           className={cn('border-b-2 px-3 py-2 text-sm font-medium',
@@ -32,115 +31,122 @@ export default function AdminPage() {
         >Academias y documentos</button>
       </div>
 
-      {tab === 'question' ? <CreateQuestionForm /> : <AcademiesManager />}
+      {tab === 'import' ? <ExamImporter /> : <AcademiesManager />}
     </div>
   )
 }
 
-const emptyQuestion: CreateQuestionPayload = {
-  specialtyId: '', stem: '', optionA: '', optionB: '', optionC: '', optionD: '', optionE: '',
-  correctOption: 'A', explanation: '', difficulty: 'MEDIA', source: '', year: undefined,
+const difficultyBadge: Record<string, string> = {
+  BAJA: 'bg-green-100 text-green-700',
+  MEDIA: 'bg-amber-100 text-amber-700',
+  ALTA: 'bg-red-100 text-red-700',
 }
 
-function CreateQuestionForm() {
-  const [form, setForm] = useState<CreateQuestionPayload>(emptyQuestion)
-  const [msg, setMsg] = useState<string | null>(null)
-  const { data: specialties } = useQuery({ queryKey: ['specialties'], queryFn: specialtyService.list })
+function ExamImporter() {
+  const queryClient = useQueryClient()
+  const [file, setFile] = useState<File | null>(null)
+  const [result, setResult] = useState<{ imported: number; questions: Question[] } | null>(null)
+  const [error, setError] = useState<string | null>(null)
 
-  const mutation = useMutation({
-    mutationFn: questionService.create,
-    onSuccess: () => {
-      setMsg('✓ Pregunta creada')
-      setForm(emptyQuestion)
+  const importMutation = useMutation({
+    mutationFn: () => questionService.importExam(file!),
+    onSuccess: (data) => {
+      setResult(data)
+      setError(null)
+      setFile(null)
+      queryClient.invalidateQueries({ queryKey: ['questions'] })
     },
-    onError: () => setMsg('Error al crear la pregunta (¿eres admin?)'),
+    onError: (e: unknown) => {
+      const msg = (e as { response?: { data?: { message?: string } } })?.response?.data?.message
+      setError(msg ?? 'Error al importar el examen. Revisa que sea un PDF con texto y respuestas.')
+    },
   })
 
-  const set = (k: keyof CreateQuestionPayload, v: string | number | undefined) =>
-    setForm((f) => ({ ...f, [k]: v }))
-
-  const submit = (e: React.FormEvent) => {
-    e.preventDefault()
-    setMsg(null)
-    mutation.mutate({ ...form, year: form.year ? Number(form.year) : undefined })
-  }
-
-  const input = 'w-full rounded-lg border px-3 py-2 text-sm'
+  const deleteMutation = useMutation({
+    mutationFn: (id: string) => questionService.remove(id),
+    onSuccess: (_d, id) => {
+      setResult((r) => r ? { ...r, imported: r.imported - 1, questions: r.questions.filter((q) => q.id !== id) } : r)
+    },
+  })
 
   return (
-    <form onSubmit={submit} className="max-w-2xl space-y-4 rounded-xl border bg-card p-6 shadow-sm">
-      <div className="grid gap-4 sm:grid-cols-2">
-        <div>
-          <label className="mb-1 block text-sm font-medium">Especialidad</label>
-          <select required value={form.specialtyId} onChange={(e) => set('specialtyId', e.target.value)} className={input}>
-            <option value="">Selecciona...</option>
-            {specialties?.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
-          </select>
-        </div>
-        <div>
-          <label className="mb-1 block text-sm font-medium">Dificultad</label>
-          <select value={form.difficulty} onChange={(e) => set('difficulty', e.target.value as Difficulty)} className={input}>
-            <option value="BAJA">Baja</option>
-            <option value="MEDIA">Media</option>
-            <option value="ALTA">Alta</option>
-          </select>
-        </div>
-      </div>
-
-      <div>
-        <label className="mb-1 block text-sm font-medium">Enunciado (caso clínico)</label>
-        <textarea required value={form.stem} onChange={(e) => set('stem', e.target.value)} rows={4} className={input} />
-      </div>
-
-      {(['A', 'B', 'C', 'D', 'E'] as const).map((opt) => {
-        const key = `option${opt}` as keyof CreateQuestionPayload
-        return (
-          <div key={opt}>
-            <label className="mb-1 block text-sm font-medium">Opción {opt}{opt === 'A' || opt === 'B' ? ' *' : ''}</label>
-            <input
-              required={opt === 'A' || opt === 'B'}
-              value={(form[key] as string) ?? ''}
-              onChange={(e) => set(key, e.target.value)}
-              className={input}
-            />
+    <div className="max-w-3xl space-y-6">
+      <div className="space-y-4 rounded-xl border bg-card p-6 shadow-sm">
+        <div className="flex items-center gap-2">
+          <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10 text-primary">
+            <Sparkles className="h-5 w-5" />
           </div>
-        )
-      })}
-
-      <div className="grid gap-4 sm:grid-cols-2">
-        <div>
-          <label className="mb-1 block text-sm font-medium">Opción correcta</label>
-          <select value={form.correctOption} onChange={(e) => set('correctOption', e.target.value)} className={input}>
-            {['A', 'B', 'C', 'D', 'E'].map((o) => <option key={o} value={o}>{o}</option>)}
-          </select>
+          <div>
+            <h3 className="font-semibold">Importar examen con IA</h3>
+            <p className="text-sm text-muted-foreground">
+              Sube un PDF de examen (con las respuestas). La IA detecta cada pregunta, la clasifica por
+              especialidad y la agrega al banco y a los simulacros.
+            </p>
+          </div>
         </div>
-        <div>
-          <label className="mb-1 block text-sm font-medium">Año</label>
-          <input type="number" value={form.year ?? ''} onChange={(e) => set('year', e.target.value ? Number(e.target.value) : undefined)} className={input} />
+
+        <label className="flex cursor-pointer items-center gap-3 rounded-lg border border-dashed p-4 hover:bg-accent">
+          <FileText className="h-5 w-5 text-muted-foreground" />
+          <span className="text-sm">
+            {file ? file.name : 'Selecciona un PDF de examen…'}
+          </span>
+          <input
+            type="file"
+            accept="application/pdf,.pdf"
+            className="hidden"
+            onChange={(e) => { setFile(e.target.files?.[0] ?? null); setError(null) }}
+          />
+        </label>
+
+        <button
+          onClick={() => { setError(null); importMutation.mutate() }}
+          disabled={!file || importMutation.isPending}
+          className="flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground disabled:opacity-50"
+        >
+          {importMutation.isPending
+            ? <><Loader2 className="h-4 w-4 animate-spin" /> Analizando con IA… (puede tardar ~1 min)</>
+            : <><Upload className="h-4 w-4" /> Analizar e importar</>}
+        </button>
+
+        {error && <p className="text-sm text-destructive">{error}</p>}
+      </div>
+
+      {result && (
+        <div className="space-y-3 rounded-xl border bg-card p-6 shadow-sm">
+          <h3 className="font-semibold text-primary">
+            ✓ {result.imported} pregunta{result.imported === 1 ? '' : 's'} importada{result.imported === 1 ? '' : 's'}
+          </h3>
+          <p className="text-sm text-muted-foreground">
+            Revisa la clasificación. Si alguna quedó mal, elimínala con la papelera.
+          </p>
+          <ul className="divide-y">
+            {result.questions.map((q) => (
+              <li key={q.id} className="flex items-start justify-between gap-3 py-3">
+                <div className="min-w-0">
+                  <div className="mb-1 flex flex-wrap items-center gap-2">
+                    <span className="rounded-full bg-secondary px-2 py-0.5 text-xs font-medium text-secondary-foreground">
+                      {q.specialtyName}
+                    </span>
+                    <span className={cn('rounded-full px-2 py-0.5 text-xs font-medium', difficultyBadge[q.difficulty] ?? 'bg-muted')}>
+                      {q.difficulty}
+                    </span>
+                  </div>
+                  <p className="truncate text-sm">{q.stem}</p>
+                </div>
+                <button
+                  onClick={() => deleteMutation.mutate(q.id)}
+                  disabled={deleteMutation.isPending}
+                  className="shrink-0 rounded-lg p-2 text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
+                  title="Eliminar pregunta"
+                >
+                  <Trash2 className="h-4 w-4" />
+                </button>
+              </li>
+            ))}
+          </ul>
         </div>
-      </div>
-
-      <div>
-        <label className="mb-1 block text-sm font-medium">Explicación</label>
-        <textarea value={form.explanation} onChange={(e) => set('explanation', e.target.value)} rows={3} className={input} />
-      </div>
-
-      <div>
-        <label className="mb-1 block text-sm font-medium">Fuente (ej: ENAM 2023)</label>
-        <input value={form.source} onChange={(e) => set('source', e.target.value)} className={input} />
-      </div>
-
-      {msg && <p className="text-sm">{msg}</p>}
-
-      <button
-        type="submit"
-        disabled={mutation.isPending}
-        className="flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground disabled:opacity-50"
-      >
-        <Plus className="h-4 w-4" />
-        {mutation.isPending ? 'Guardando...' : 'Crear pregunta'}
-      </button>
-    </form>
+      )}
+    </div>
   )
 }
 

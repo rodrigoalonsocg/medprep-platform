@@ -4,8 +4,11 @@ import com.medprep.dto.request.CreateQuestionRequest;
 import com.medprep.dto.request.SubmitAttemptRequest;
 import com.medprep.dto.response.ApiResponse;
 import com.medprep.dto.response.AttemptResponse;
+import com.medprep.dto.response.ExamImportResponse;
 import com.medprep.dto.response.QuestionResponse;
 import com.medprep.model.Question;
+import com.medprep.service.AiService;
+import com.medprep.service.PdfService;
 import com.medprep.service.QuestionService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -15,10 +18,12 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
 import java.util.UUID;
@@ -30,6 +35,8 @@ import java.util.UUID;
 public class QuestionController {
 
     private final QuestionService questionService;
+    private final AiService aiService;
+    private final PdfService pdfService;
 
     @PostMapping
     @PreAuthorize("hasRole('ADMIN')")
@@ -39,6 +46,26 @@ public class QuestionController {
             @AuthenticationPrincipal String userId) {
         QuestionResponse response = questionService.createQuestion(req, UUID.fromString(userId));
         return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.ok(response, "Pregunta creada exitosamente"));
+    }
+
+    @PostMapping(value = "/import", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @PreAuthorize("hasRole('ADMIN')")
+    @Operation(summary = "Importar examen (PDF): la IA detecta y clasifica las preguntas por especialidad (solo admin)")
+    public ApiResponse<ExamImportResponse> importExam(
+            @RequestParam("file") MultipartFile file,
+            @AuthenticationPrincipal String userId) {
+        String text = pdfService.extractText(file);
+        pdfService.storeBestEffort(file);
+        ExamImportResponse result = aiService.importFromExam(text, UUID.fromString(userId));
+        return ApiResponse.ok(result, "Se importaron " + result.getImported() + " preguntas");
+    }
+
+    @DeleteMapping("/{id}")
+    @PreAuthorize("hasRole('ADMIN')")
+    @Operation(summary = "Eliminar pregunta (solo admin)")
+    public ApiResponse<String> delete(@PathVariable UUID id) {
+        questionService.deleteQuestion(id);
+        return ApiResponse.ok("Pregunta eliminada");
     }
 
     @GetMapping

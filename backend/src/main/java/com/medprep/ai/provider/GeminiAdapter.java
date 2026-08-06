@@ -44,6 +44,12 @@ public class GeminiAdapter implements AiAdapter {
         return call(buildFlashcardPrompt(stem, answer, explanation)).thenApply(this::parseFlashcards);
     }
 
+    @Override
+    public CompletableFuture<List<ExtractedQuestion>> extractQuestions(String examText, List<String> specialtyNames) {
+        return call(AiAdapter.buildExtractPrompt(examText, specialtyNames))
+                .thenApply(AiAdapter::parseExtractedJson);
+    }
+
     private CompletableFuture<String> call(String prompt) {
         var body = Map.of(
                 "contents", List.of(Map.of(

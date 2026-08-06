@@ -2,73 +2,81 @@ import { NavLink } from 'react-router-dom'
 import {
   LayoutDashboard,
   BookOpen,
-  TrendingUp,
+  Activity,
   Layers,
   Timer,
   GraduationCap,
   ShieldCheck,
+  Stethoscope,
 } from 'lucide-react'
 import { useAuthStore } from '@/store/authStore'
 import { cn } from '@/lib/utils'
 
 const navItems = [
   { to: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
+  { to: '/progreso', label: 'Mi Progreso', icon: Activity },
   { to: '/banco-preguntas', label: 'Banco de Preguntas', icon: BookOpen },
-  { to: '/progreso', label: 'Semáforo Clínico', icon: TrendingUp },
   { to: '/flashcards', label: 'Flashcards', icon: Layers },
   { to: '/workspace', label: 'Workspace', icon: Timer },
   { to: '/academias', label: 'Academias', icon: GraduationCap },
 ]
 
+const linkClass = ({ isActive }: { isActive: boolean }) =>
+  cn(
+    'flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors',
+    isActive
+      ? 'bg-primary text-primary-foreground shadow-sm'
+      : 'text-muted-foreground hover:bg-accent hover:text-accent-foreground',
+  )
+
 export default function Sidebar() {
   const { isAdmin, profile } = useAuthStore()
+  const initial = (profile?.fullName ?? '?').charAt(0).toUpperCase()
 
   return (
     <aside className="flex w-64 flex-col border-r bg-card">
-      <div className="flex h-16 items-center border-b px-6">
-        <span className="text-xl font-bold text-primary">MedPrep</span>
+      {/* Marca */}
+      <div className="flex h-16 items-center gap-3 bg-primary px-5 text-primary-foreground">
+        <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-white/15 ring-1 ring-white/25">
+          <Stethoscope className="h-5 w-5" />
+        </div>
+        <div className="leading-tight">
+          <p className="text-lg font-bold tracking-tight">MedPrep</p>
+          <p className="text-[11px] font-medium text-primary-foreground/80">
+            Preparación ENAM / EsSalud
+          </p>
+        </div>
       </div>
 
-      <nav className="flex-1 space-y-1 p-4">
+      <nav className="flex-1 space-y-1 p-3">
         {navItems.map(({ to, label, icon: Icon }) => (
-          <NavLink
-            key={to}
-            to={to}
-            className={({ isActive }) =>
-              cn(
-                'flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors',
-                isActive
-                  ? 'bg-primary text-primary-foreground'
-                  : 'text-muted-foreground hover:bg-accent hover:text-accent-foreground',
-              )
-            }
-          >
-            <Icon className="h-4 w-4" />
+          <NavLink key={to} to={to} className={linkClass}>
+            <Icon className="h-[18px] w-[18px]" />
             {label}
           </NavLink>
         ))}
 
         {isAdmin() && (
-          <NavLink
-            to="/admin"
-            className={({ isActive }) =>
-              cn(
-                'flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors',
-                isActive
-                  ? 'bg-primary text-primary-foreground'
-                  : 'text-muted-foreground hover:bg-accent hover:text-accent-foreground',
-              )
-            }
-          >
-            <ShieldCheck className="h-4 w-4" />
-            Administración
-          </NavLink>
+          <>
+            <div className="my-2 border-t" />
+            <NavLink to="/admin" className={linkClass}>
+              <ShieldCheck className="h-[18px] w-[18px]" />
+              Administración
+            </NavLink>
+          </>
         )}
       </nav>
 
       <div className="border-t p-4">
-        <p className="truncate text-xs text-muted-foreground">{profile?.fullName}</p>
-        <p className="text-xs text-muted-foreground capitalize">{profile?.role}</p>
+        <div className="flex items-center gap-3">
+          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-secondary text-sm font-semibold text-secondary-foreground">
+            {initial}
+          </div>
+          <div className="min-w-0">
+            <p className="truncate text-sm font-medium">{profile?.fullName ?? 'Cargando...'}</p>
+            <p className="text-xs capitalize text-muted-foreground">{profile?.role}</p>
+          </div>
+        </div>
       </div>
     </aside>
   )

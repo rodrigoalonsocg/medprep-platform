@@ -56,4 +56,19 @@ export const questionService = {
     const { data } = await api.post<ApiResponse<Question>>('/questions', payload)
     return data.data
   },
+
+  importExam: async (file: File) => {
+    const form = new FormData()
+    form.append('file', file)
+    const { data } = await api.post<ApiResponse<{ imported: number; questions: Question[] }>>(
+      '/questions/import',
+      form,
+      { headers: { 'Content-Type': 'multipart/form-data' } },
+    )
+    return data.data
+  },
+
+  remove: async (id: string) => {
+    await api.delete(`/questions/${id}`)
+  },
 }

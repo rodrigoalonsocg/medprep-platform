@@ -63,6 +63,14 @@ public class QuestionService {
         return toResponse(questionRepository.save(question));
     }
 
+    @Transactional
+    public void deleteQuestion(UUID id) {
+        if (!questionRepository.existsById(id)) {
+            throw MedPrepException.notFound("Pregunta", id.toString());
+        }
+        questionRepository.deleteById(id);
+    }
+
     @Transactional(readOnly = true)
     public Page<QuestionResponse> findQuestions(UUID specialtyId, UUID subspecialtyId,
                                                  Question.Difficulty difficulty, Pageable pageable) {

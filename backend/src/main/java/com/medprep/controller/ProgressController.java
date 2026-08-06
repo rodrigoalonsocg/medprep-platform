@@ -17,7 +17,7 @@ import java.util.UUID;
 @RestController
 @RequestMapping("/api/v1/progress")
 @RequiredArgsConstructor
-@Tag(name = "Semáforo Clínico", description = "Progreso y analítica por especialidad")
+@Tag(name = "Mi Progreso", description = "Progreso y analítica por especialidad")
 public class ProgressController {
 
     private final ProgressService progressService;
