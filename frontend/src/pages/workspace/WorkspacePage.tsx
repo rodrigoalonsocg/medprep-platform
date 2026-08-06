@@ -239,12 +239,12 @@ function Dino() {
   return (
     <div className="absolute bottom-6" style={{ left: x }}>
       {greet && (
-        <div className="absolute -top-9 left-2 flex flex-col items-center opacity-80">
+        <div className="absolute -top-9 left-2 flex flex-col items-center opacity-30">
           <div className="whitespace-nowrap rounded-md border border-slate-900 bg-white px-2 py-0.5 text-[10px] font-semibold text-slate-900">{greet}</div>
           <div className="-mt-1 h-2 w-2 rotate-45 border-b border-r border-slate-900 bg-white" />
         </div>
       )}
-      <svg width={26} height={37} viewBox="0 0 10 14" shapeRendering="crispEdges" className={`opacity-90 ${greet ? '' : 'dino-walk'}`}>
+      <svg width={26} height={37} viewBox="0 0 10 14" shapeRendering="crispEdges" className={`opacity-30 ${greet ? '' : 'dino-walk'}`}>
         {DINO.flatMap((row, r) =>
           row.split('').map((c, col) => (c === '#'
             ? <rect key={`${r}-${col}`} x={col} y={r} width={1} height={1} fill="#e5e7eb" />
