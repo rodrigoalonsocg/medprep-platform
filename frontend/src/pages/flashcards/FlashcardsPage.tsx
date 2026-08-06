@@ -1,6 +1,8 @@
+import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import { Download, Layers } from 'lucide-react'
+import { Download, Layers, Eye, EyeOff } from 'lucide-react'
 import { aiService } from '@/services/ai.service'
+import type { FlashcardDTO } from '@/types'
 
 export default function FlashcardsPage() {
   const { data: flashcards, isLoading } = useQuery({
@@ -45,22 +47,7 @@ export default function FlashcardsPage() {
         </div>
       ) : hasCards ? (
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-          {flashcards!.map((f) => (
-            <div key={f.id} className="rounded-lg border bg-card p-4 shadow-sm">
-              <div className="mb-2 flex items-center justify-between">
-                {f.specialtyName && (
-                  <span className="rounded-full bg-secondary px-2 py-0.5 text-xs font-medium">
-                    {f.specialtyName}
-                  </span>
-                )}
-                {f.exported && (
-                  <span className="text-xs text-muted-foreground">Exportada</span>
-                )}
-              </div>
-              <p className="text-sm font-semibold">{f.front}</p>
-              <p className="mt-1 text-sm text-muted-foreground">{f.back}</p>
-            </div>
-          ))}
+          {flashcards!.map((f) => <FlashcardCard key={f.id} f={f} />)}
         </div>
       ) : (
         <div className="flex flex-col items-center gap-4 rounded-xl border border-dashed p-16 text-center">
@@ -72,6 +59,32 @@ export default function FlashcardsPage() {
           </p>
         </div>
       )}
+    </div>
+  )
+}
+
+function FlashcardCard({ f }: { f: FlashcardDTO }) {
+  const [show, setShow] = useState(false)
+  return (
+    <div className="rounded-lg border bg-card p-4 shadow-sm">
+      <div className="mb-2 flex items-center justify-between gap-2">
+        {f.specialtyName
+          ? <span className="rounded-full bg-secondary px-2 py-0.5 text-xs font-medium">{f.specialtyName}</span>
+          : <span />}
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => setShow((v) => !v)}
+            className="flex items-center gap-1 rounded-lg border px-2 py-0.5 text-xs font-medium text-primary hover:bg-accent"
+          >
+            {show ? <><EyeOff className="h-3.5 w-3.5" /> Ocultar</> : <><Eye className="h-3.5 w-3.5" /> Ver respuesta</>}
+          </button>
+          {f.exported && <span className="text-xs text-muted-foreground">Exportada</span>}
+        </div>
+      </div>
+      <p className="text-sm font-semibold">{f.front}</p>
+      {show
+        ? <p className="mt-1 text-sm text-muted-foreground">{f.back}</p>
+        : <p className="mt-1 text-sm italic text-muted-foreground/60">Respuesta oculta — pulsa "Ver respuesta"</p>}
     </div>
   )
 }
