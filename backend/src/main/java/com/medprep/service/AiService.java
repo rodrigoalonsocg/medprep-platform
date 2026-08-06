@@ -22,6 +22,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.text.Normalizer;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -126,10 +127,18 @@ public class AiService {
         }
         List<String> names = specialties.stream().map(Specialty::getName).toList();
 
-        // Límite defensivo de tamaño para no disparar el costo/contexto de la IA.
-        String text = examText.length() > 45000 ? examText.substring(0, 45000) : examText;
-
-        List<AiAdapter.ExtractedQuestion> extracted = aiAdapter.extractQuestions(text, names).join();
+        // Trocea el examen en lotes y los procesa EN PARALELO: evita que la
+        // respuesta de la IA se trunque (exámenes grandes) y es mucho más rápido.
+        List<String> batches = splitIntoBatches(examText, 10);
+        List<AiAdapter.ExtractedQuestion> extracted = batches.stream()
+                .map(batch -> aiAdapter.extractQuestions(batch, names)
+                        .exceptionally(ex -> {
+                            log.warn("Lote falló, se omite: {}", ex.getMessage());
+                            return List.of();
+                        }))
+                .toList().stream()                 // dispara todas antes de esperar
+                .flatMap(f -> f.join().stream())
+                .toList();
         if (extracted.isEmpty()) {
             throw MedPrepException.badRequest(
                     "La IA no detectó preguntas en el PDF. Verifica que el examen tenga preguntas de opción múltiple con sus respuestas.");
@@ -184,6 +193,23 @@ public class AiService {
 
         log.info("Importación de examen: {} preguntas guardadas de {} detectadas", saved.size(), extracted.size());
         return new ExamImportResponse(saved.size(), saved);
+    }
+
+    /** Trocea el texto por preguntas ("Pregunta N"); si no hay marcador, por tamaño. */
+    private static List<String> splitIntoBatches(String text, int perBatch) {
+        List<String> blocks = Arrays.stream(text.split("(?=Pregunta\\s+\\d+)"))
+                .map(String::trim).filter(s -> !s.isBlank()).toList();
+        List<String> batches = new ArrayList<>();
+        if (blocks.size() > 1) {
+            for (int i = 0; i < blocks.size(); i += perBatch) {
+                batches.add(String.join("\n\n", blocks.subList(i, Math.min(i + perBatch, blocks.size()))));
+            }
+        } else {
+            for (int i = 0; i < text.length(); i += 9000) {
+                batches.add(text.substring(i, Math.min(i + 9000, text.length())));
+            }
+        }
+        return batches;
     }
 
     private static String opt(List<String> options, int i) {
