@@ -125,7 +125,7 @@ export default function WorkspacePage() {
               style={{ top: `${st.top}%`, left: `${st.left}%`, width: st.size, height: st.size }} />
           ))}
           <Dino />
-          <div className="absolute bottom-0 left-0 right-0 h-8 bg-slate-800/70" />
+          <div className="absolute bottom-0 right-0 h-8 bg-slate-800/70" style={{ left: SIDEBAR }} />
         </div>
       )}
       <div>
@@ -244,7 +244,7 @@ function Dino() {
           <div className="-mt-1 h-2 w-2 rotate-45 border-b border-r border-slate-900 bg-white" />
         </div>
       )}
-      <svg width={26} height={37} viewBox="0 0 10 14" shapeRendering="crispEdges" className={`opacity-50 ${greet ? '' : 'dino-walk'}`}>
+      <svg width={26} height={37} viewBox="0 0 10 14" shapeRendering="crispEdges" className={`opacity-90 ${greet ? '' : 'dino-walk'}`}>
         {DINO.flatMap((row, r) =>
           row.split('').map((c, col) => (c === '#'
             ? <rect key={`${r}-${col}`} x={col} y={r} width={1} height={1} fill="#e5e7eb" />
