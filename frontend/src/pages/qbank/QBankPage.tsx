@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { questionService } from '@/services/question.service'
 import { specialtyService } from '@/services/specialty.service'
@@ -33,6 +33,23 @@ export default function QBankPage() {
     setFilters((f) => ({ ...f, [k]: v || undefined }))
     setPage(0)
   }
+
+  // Selección múltiple (solo admin)
+  const { isAdmin } = useAuthStore()
+  const [selected, setSelected] = useState<Set<string>>(new Set())
+  const [confirmBulk, setConfirmBulk] = useState(false)
+  useEffect(() => { setSelected(new Set()) }, [page, filters, mode])
+
+  const pageIds = questions?.content.map((q) => q.id) ?? []
+  const allSelected = pageIds.length > 0 && pageIds.every((id) => selected.has(id))
+  const toggleSelect = (id: string) =>
+    setSelected((s) => { const n = new Set(s); n.has(id) ? n.delete(id) : n.add(id); return n })
+  const toggleAll = () =>
+    setSelected((s) => { const n = new Set(s); if (allSelected) pageIds.forEach((id) => n.delete(id)); else pageIds.forEach((id) => n.add(id)); return n })
+  const bulkDelete = useMutation({
+    mutationFn: async () => { await Promise.all([...selected].map((id) => questionService.remove(id))) },
+    onSuccess: () => { setConfirmBulk(false); setSelected(new Set()); queryClient.invalidateQueries({ queryKey: ['questions'] }) },
+  })
 
   const { data: errorQuestions, isLoading: loadingErrors } = useQuery({
     queryKey: ['questions', 'errors'],
@@ -220,6 +237,22 @@ export default function QBankPage() {
         </div>
       )}
 
+      {mode === 'browse' && isAdmin() && (
+        <div className="flex items-center justify-between rounded-lg border bg-card px-3 py-2">
+          <label className="flex items-center gap-2 text-sm">
+            <input type="checkbox" checked={allSelected} onChange={toggleAll} className="h-4 w-4" />
+            Seleccionar todo (esta página)
+          </label>
+          <button
+            onClick={() => setConfirmBulk(true)}
+            disabled={selected.size === 0}
+            className="flex items-center gap-2 rounded-lg border px-3 py-1.5 text-sm font-medium text-destructive hover:bg-destructive/10 disabled:opacity-40"
+          >
+            <Trash2 className="h-4 w-4" /> Eliminar seleccionadas ({selected.size})
+          </button>
+        </div>
+      )}
+
       {mode === 'errores' && (
         <p className="rounded-lg bg-amber-50 p-3 text-sm text-amber-800 dark:bg-amber-950/40 dark:text-amber-300">
           Preguntas que fallaste o marcaste como dudosas en las últimas 3 semanas.
@@ -235,7 +268,13 @@ export default function QBankPage() {
       ) : (
         <div className="space-y-3">
           {list?.content.map((q) => (
-            <QuestionCard key={q.id} question={q} />
+            <QuestionCard
+              key={q.id}
+              question={q}
+              selectable={mode === 'browse' && isAdmin()}
+              selected={selected.has(q.id)}
+              onToggle={() => toggleSelect(q.id)}
+            />
           ))}
           {list?.content.length === 0 && (
             <div className="flex flex-col items-center gap-3 rounded-lg border border-dashed p-10 text-center">
@@ -260,6 +299,25 @@ export default function QBankPage() {
           <button disabled={page >= questions.totalPages - 1} onClick={() => setPage((p) => p + 1)} className="rounded-lg border px-3 py-1.5 text-sm disabled:opacity-40">Siguiente</button>
         </div>
       )}
+
+      {confirmBulk && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onClick={() => setConfirmBulk(false)}>
+          <div className="w-full max-w-sm rounded-xl border bg-card p-5 shadow-lg" onClick={(e) => e.stopPropagation()}>
+            <h3 className="font-semibold">¿Eliminar {selected.size} pregunta{selected.size === 1 ? '' : 's'}?</h3>
+            <p className="mt-1 text-sm text-muted-foreground">Esta acción no se puede deshacer.</p>
+            <div className="mt-4 flex justify-end gap-2">
+              <button onClick={() => setConfirmBulk(false)} className="rounded-lg border px-3 py-1.5 text-sm">Cancelar</button>
+              <button
+                onClick={() => bulkDelete.mutate()}
+                disabled={bulkDelete.isPending}
+                className="rounded-lg bg-destructive px-3 py-1.5 text-sm font-medium text-destructive-foreground disabled:opacity-50"
+              >
+                {bulkDelete.isPending ? 'Eliminando…' : 'Eliminar'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
@@ -281,7 +339,9 @@ function TabButton({ active, onClick, icon: Icon, label }: {
   )
 }
 
-function QuestionCard({ question: q }: { question: Question }) {
+function QuestionCard({ question: q, selectable, selected, onToggle }: {
+  question: Question; selectable?: boolean; selected?: boolean; onToggle?: () => void
+}) {
   const [pattern, setPattern] = useState<PatternDTO | null>(null)
   const [confirming, setConfirming] = useState(false)
   const { isAdmin } = useAuthStore()
@@ -296,9 +356,12 @@ function QuestionCard({ question: q }: { question: Question }) {
   })
 
   return (
-    <div className="rounded-lg border bg-card p-4">
+    <div className={cn('rounded-lg border bg-card p-4', selected && 'ring-2 ring-primary')}>
       <div className="mb-2 flex items-start justify-between gap-2">
         <div className="flex flex-wrap items-center gap-2">
+          {selectable && (
+            <input type="checkbox" checked={!!selected} onChange={onToggle} className="h-4 w-4" />
+          )}
           <span className="rounded-full bg-secondary px-2 py-0.5 text-xs font-medium">{q.specialtyName}</span>
           {q.academy && <span className="rounded-full border px-2 py-0.5 text-xs font-medium">{q.academy}</span>}
           <span className={cn(
