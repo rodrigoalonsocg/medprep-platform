@@ -65,7 +65,7 @@ function SpecialtyCard({ specialtyName, accuracyPercentage, trafficLight, totalA
         <ResponsiveContainer width={110} height={110}>
           <RadialBarChart innerRadius={30} outerRadius={50} data={chartData} startAngle={90} endAngle={-270}>
             <PolarAngleAxis type="number" domain={[0, 100]} angleAxisId={0} tick={false} />
-            <RadialBar dataKey="value" cornerRadius={6} background={{ fill: '#f1f5f9' }} />
+            <RadialBar dataKey="value" cornerRadius={6} background={{ fill: 'rgba(148,163,184,0.25)' }} />
           </RadialBarChart>
         </ResponsiveContainer>
         <div className="absolute text-center">
@@ -79,7 +79,7 @@ function SpecialtyCard({ specialtyName, accuracyPercentage, trafficLight, totalA
       </div>
 
       {sprintRequired && (
-        <div className="mt-3 rounded-lg bg-red-50 px-3 py-2 text-xs font-medium text-red-700">
+        <div className="mt-3 rounded-lg bg-red-50 px-3 py-2 text-xs font-medium text-red-700 dark:bg-red-950/50 dark:text-red-300">
           ⚠️ Sprint de recuperación recomendado
         </div>
       )}

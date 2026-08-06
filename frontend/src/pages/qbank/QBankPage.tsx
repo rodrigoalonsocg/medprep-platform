@@ -116,8 +116,8 @@ export default function QBankPage() {
                 className={cn(
                   'flex w-full items-start gap-3 rounded-lg border p-4 text-left text-sm transition-colors',
                   !lastAttempt && 'hover:border-primary hover:bg-accent',
-                  lastAttempt && isCorrect && 'border-green-500 bg-green-50 text-green-800',
-                  lastAttempt && isSelected && !isCorrect && 'border-red-500 bg-red-50 text-red-800',
+                  lastAttempt && isCorrect && 'border-green-500 bg-green-50 text-green-800 dark:bg-green-950/40 dark:text-green-300',
+                  lastAttempt && isSelected && !isCorrect && 'border-red-500 bg-red-50 text-red-800 dark:bg-red-950/40 dark:text-red-300',
                   lastAttempt && !isSelected && !isCorrect && 'opacity-60',
                 )}
               >
@@ -131,7 +131,7 @@ export default function QBankPage() {
         {lastAttempt && (
           <div className={cn(
             'rounded-lg p-4',
-            lastAttempt.correct ? 'bg-green-50 text-green-800' : 'bg-red-50 text-red-800',
+            lastAttempt.correct ? 'bg-green-50 text-green-800 dark:bg-green-950/40 dark:text-green-300' : 'bg-red-50 text-red-800 dark:bg-red-950/40 dark:text-red-300',
           )}>
             <div className="mb-2 flex items-center gap-2 font-semibold">
               {lastAttempt.correct
@@ -146,7 +146,7 @@ export default function QBankPage() {
               <button
                 onClick={() => flashcardMutation.mutate(q.id)}
                 disabled={flashcardMutation.isPending}
-                className="flex items-center gap-2 rounded-lg border border-primary bg-white px-4 py-2 text-sm font-medium text-primary disabled:opacity-50"
+                className="flex items-center gap-2 rounded-lg border border-primary bg-card px-4 py-2 text-sm font-medium text-primary disabled:opacity-50"
               >
                 <Sparkles className="h-4 w-4" />
                 {flashcardMutation.isPending ? 'Generando...' : 'Generar Flashcard (IA)'}
@@ -190,7 +190,7 @@ export default function QBankPage() {
       </div>
 
       {mode === 'errores' && (
-        <p className="rounded-lg bg-amber-50 p-3 text-sm text-amber-800">
+        <p className="rounded-lg bg-amber-50 p-3 text-sm text-amber-800 dark:bg-amber-950/40 dark:text-amber-300">
           Preguntas que fallaste o marcaste como dudosas en las últimas 3 semanas.
         </p>
       )}
@@ -255,9 +255,9 @@ function QuestionCard({ question: q }: { question: Question }) {
         <span className="rounded-full bg-secondary px-2 py-0.5 text-xs font-medium">{q.specialtyName}</span>
         <span className={cn(
           'rounded-full px-2 py-0.5 text-xs font-medium',
-          q.difficulty === 'BAJA' ? 'bg-green-100 text-green-800' :
+          q.difficulty === 'BAJA' ? 'bg-green-100 text-green-800 dark:bg-green-950/50 dark:text-green-300' :
           q.difficulty === 'MEDIA' ? 'bg-yellow-100 text-yellow-800' :
-          'bg-red-100 text-red-800',
+          'bg-red-100 text-red-800 dark:bg-red-950/50 dark:text-red-300',
         )}>{q.difficulty}</span>
       </div>
       <p className="text-sm">{q.stem.length > 200 ? `${q.stem.slice(0, 200)}...` : q.stem}</p>

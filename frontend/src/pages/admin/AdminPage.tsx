@@ -56,9 +56,9 @@ function GrantAdmin() {
 }
 
 const difficultyBadge: Record<string, string> = {
-  BAJA: 'bg-green-100 text-green-700',
-  MEDIA: 'bg-amber-100 text-amber-700',
-  ALTA: 'bg-red-100 text-red-700',
+  BAJA: 'bg-green-100 text-green-700 dark:bg-green-950/50 dark:text-green-300',
+  MEDIA: 'bg-amber-100 text-amber-700 dark:bg-amber-950/50 dark:text-amber-300',
+  ALTA: 'bg-red-100 text-red-700 dark:bg-red-950/50 dark:text-red-300',
 }
 
 function ExamImporter() {

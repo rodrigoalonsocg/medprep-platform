@@ -35,32 +35,32 @@ export default function DashboardPage() {
           icon={<BookOpen className="h-5 w-5 text-blue-600" />}
           label="Preguntas respondidas"
           value={totalAttempts.toString()}
-          bg="bg-blue-50"
+          bg="bg-blue-50 dark:bg-blue-950/40"
         />
         <StatCard
           icon={<TrendingUp className="h-5 w-5 text-green-600" />}
           label="Precisión global"
           value={formatPercent(avgAccuracy)}
-          bg="bg-green-50"
+          bg="bg-green-50 dark:bg-green-950/40"
         />
         <StatCard
           icon={<AlertTriangle className="h-5 w-5 text-red-600" />}
           label="Especialidades en rojo"
           value={alerts.length.toString()}
-          bg="bg-red-50"
+          bg="bg-red-50 dark:bg-red-950/40"
         />
       </div>
 
       {/* Alertas de sprint */}
       {alerts.length > 0 && (
-        <div className="rounded-lg border border-red-200 bg-red-50 p-4">
+        <div className="rounded-lg border border-red-200 bg-red-50 p-4 dark:border-red-900 dark:bg-red-950/40">
           <h2 className="mb-3 flex items-center gap-2 font-semibold text-red-700">
             <AlertTriangle className="h-4 w-4" />
             Sprint de Recuperación requerido
           </h2>
           <div className="space-y-2">
             {alerts.map((alert) => (
-              <div key={alert.specialtyId} className="flex items-center justify-between rounded bg-white p-3 shadow-sm">
+              <div key={alert.specialtyId} className="flex items-center justify-between rounded border bg-card p-3 shadow-sm">
                 <span className="font-medium">{alert.specialtyName}</span>
                 <span className="text-sm text-red-600">{formatPercent(alert.accuracyPercentage)} de aciertos</span>
               </div>
