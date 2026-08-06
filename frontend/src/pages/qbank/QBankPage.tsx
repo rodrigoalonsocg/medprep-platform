@@ -237,7 +237,7 @@ export default function QBankPage() {
         </div>
       )}
 
-      {mode === 'browse' && isAdmin() && (
+      {mode === 'browse' && isAdmin() && selected.size > 0 && (
         <div className="flex items-center justify-between rounded-lg border bg-card px-3 py-2">
           <label className="flex items-center gap-2 text-sm">
             <input type="checkbox" checked={allSelected} onChange={toggleAll} className="h-4 w-4" />
