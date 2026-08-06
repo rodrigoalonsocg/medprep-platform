@@ -63,4 +63,13 @@
   input, button, select, textarea, optgroup {
     font-family: 'Montserrat', ui-sans-serif, sans-serif;
   }
+  /* Campos de texto siguen el tema (no se quedan en blanco en oscuro/noche) */
+  input, textarea, select {
+    background-color: hsl(var(--background));
+    color: hsl(var(--foreground));
+    border-color: hsl(var(--border));
+  }
+  input::placeholder, textarea::placeholder {
+    color: hsl(var(--muted-foreground));
+  }
 }
