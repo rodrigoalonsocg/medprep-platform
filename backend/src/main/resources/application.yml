@@ -19,7 +19,7 @@ spring:
       max-file-size: 50MB
       max-request-size: 50MB
 server:
-  port: ${SERVER_PORT:8080}
+  port: ${PORT:${SERVER_PORT:8080}}
 
 # Supabase
 supabase:
