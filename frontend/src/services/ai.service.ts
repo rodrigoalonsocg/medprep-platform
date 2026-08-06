@@ -7,9 +7,10 @@ export const aiService = {
     return data.data
   },
 
+  // Fire-and-forget: el backend responde al instante y genera en segundo plano.
   generateFlashcards: async (questionId: string) => {
-    const { data } = await api.post<ApiResponse<FlashcardDTO[]>>(`/ai/flashcards/${questionId}`)
-    return data.data
+    const { data } = await api.post<ApiResponse<string>>(`/ai/flashcards/${questionId}`)
+    return data.data // mensaje
   },
 
   getFlashcards: async () => {

@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { useQuery, useMutation } from '@tanstack/react-query'
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { questionService } from '@/services/question.service'
 import { aiService } from '@/services/ai.service'
 import type { Question, AttemptResponse, PatternDTO } from '@/types'
@@ -14,6 +14,7 @@ export default function QBankPage() {
   const [currentIndex, setCurrentIndex] = useState(0)
   const [lastAttempt, setLastAttempt] = useState<AttemptResponse | null>(null)
   const [flashMsg, setFlashMsg] = useState<string | null>(null)
+  const queryClient = useQueryClient()
 
   const { data: questions, isLoading } = useQuery({
     queryKey: ['questions'],
@@ -41,8 +42,12 @@ export default function QBankPage() {
 
   const flashcardMutation = useMutation({
     mutationFn: (questionId: string) => aiService.generateFlashcards(questionId),
-    onSuccess: (cards) => setFlashMsg(`✓ ${cards.length} flashcard(s) generada(s) y guardada(s)`),
-    onError: () => setFlashMsg('No se pudo generar la flashcard (revisa la API de IA)'),
+    onSuccess: (msg) => {
+      setFlashMsg(`✓ ${msg}`)
+      // Refresca la biblioteca cuando la generación en segundo plano ya terminó.
+      setTimeout(() => queryClient.invalidateQueries({ queryKey: ['flashcards'] }), 9000)
+    },
+    onError: () => setFlashMsg('No se pudo iniciar la generación (revisa la API de IA)'),
   })
 
   const handleStartSimulacro = async () => {

@@ -20,6 +20,7 @@ import java.util.concurrent.CompletableFuture;
 @RestController
 @RequestMapping("/api/v1/ai")
 @RequiredArgsConstructor
+@lombok.extern.slf4j.Slf4j
 @Tag(name = "IA", description = "Análisis de patrones clínicos y generación de flashcards")
 public class AiController {
 
@@ -34,12 +35,19 @@ public class AiController {
     }
 
     @PostMapping("/flashcards/{questionId}")
-    @Operation(summary = "Genera flashcards IA para una pregunta y las guarda en la biblioteca del usuario")
-    public CompletableFuture<ApiResponse<List<FlashcardResponse>>> generateFlashcards(
+    @Operation(summary = "Dispara la generación de flashcards en segundo plano (fire-and-forget); se guardan en la biblioteca")
+    public ApiResponse<String> generateFlashcards(
             @PathVariable UUID questionId,
             @AuthenticationPrincipal String userId) {
-        return aiService.generateFlashcards(questionId, UUID.fromString(userId))
-                .thenApply(ApiResponse::ok);
+        // No se espera el resultado: la generación corre en segundo plano y se
+        // guarda sola. Aunque el usuario cierre la pestaña, la flashcard queda.
+        aiService.generateFlashcards(questionId, UUID.fromString(userId))
+                .whenComplete((res, ex) -> {
+                    if (ex != null) {
+                        log.warn("Fallo generando flashcards para {}: {}", questionId, ex.getMessage());
+                    }
+                });
+        return ApiResponse.ok("Generando flashcards… aparecerán en tu biblioteca en unos segundos.");
     }
 
     @GetMapping("/flashcards")
