@@ -46,7 +46,7 @@ public interface QuestionRepository extends JpaRepository<Question, UUID> {
 
     @Query(value = """
             SELECT * FROM questions
-            WHERE (:specialtyId IS NULL OR specialty_id = :specialtyId::uuid)
+            WHERE (:specialtyId IS NULL OR specialty_id = CAST(:specialtyId AS uuid))
             ORDER BY RANDOM()
             LIMIT :limit
             """, nativeQuery = true)
