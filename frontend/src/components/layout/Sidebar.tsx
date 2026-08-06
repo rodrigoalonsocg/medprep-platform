@@ -16,7 +16,7 @@ const navItems = [
   { to: '/progreso', label: 'Mi Progreso', icon: Activity },
   { to: '/banco-preguntas', label: 'Banco de Preguntas', icon: BookOpen },
   { to: '/flashcards', label: 'Flashcards', icon: Layers },
-  { to: '/workspace', label: 'Workspace', icon: Timer },
+  { to: '/workspace', label: 'Pomodoro', icon: Timer },
 ]
 
 const linkClass = ({ isActive }: { isActive: boolean }) =>

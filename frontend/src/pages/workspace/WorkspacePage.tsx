@@ -1,176 +1,193 @@
-import { useState, useEffect, useCallback, useRef } from 'react'
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { Play, Pause, RotateCcw, Timer, Clock } from 'lucide-react'
-import { specialtyService } from '@/services/specialty.service'
+import { useEffect, useMemo, useRef, useState } from 'react'
+import { useQuery } from '@tanstack/react-query'
+import { Play, Pause, RotateCcw } from 'lucide-react'
 import { studyService } from '@/services/study.service'
 import { cn } from '@/lib/utils'
 
-const POMODORO_MINUTES = 50
-const BREAK_MINUTES = 10
+type Mode = 'pomodoro' | 'short' | 'long'
+const LABELS: Record<Mode, string> = { pomodoro: 'Pomodoro', short: 'Descanso corto', long: 'Descanso largo' }
+
+interface Settings {
+  durations: Record<Mode, number> // minutos
+  autoStartBreaks: boolean
+  autoStartPomodoros: boolean
+  muteNotifications: boolean
+}
+
+const DEFAULTS: Settings = {
+  durations: { pomodoro: 25, short: 5, long: 15 },
+  autoStartBreaks: false,
+  autoStartPomodoros: false,
+  muteNotifications: false,
+}
+
+function loadSettings(): Settings {
+  try {
+    return { ...DEFAULTS, ...JSON.parse(localStorage.getItem('pomodoro') || '{}') }
+  } catch {
+    return DEFAULTS
+  }
+}
 
 export default function WorkspacePage() {
-  const [seconds, setSeconds] = useState(POMODORO_MINUTES * 60)
-  const [isRunning, setIsRunning] = useState(false)
-  const [isBreak, setIsBreak] = useState(false)
-  const [specialtyId, setSpecialtyId] = useState<string>('')
-  const startedAtRef = useRef<string | null>(null)
-  const queryClient = useQueryClient()
+  const [settings, setSettings] = useState<Settings>(loadSettings)
+  const [mode, setMode] = useState<Mode>('pomodoro')
+  const [secondsLeft, setSecondsLeft] = useState(settings.durations.pomodoro * 60)
+  const [running, setRunning] = useState(false)
+  const audioRef = useRef<HTMLAudioElement>(null)
 
-  const { data: specialties } = useQuery({ queryKey: ['specialties'], queryFn: specialtyService.list })
-  const { data: stats } = useQuery({ queryKey: ['study-stats'], queryFn: studyService.stats })
-  const { data: sessions } = useQuery({ queryKey: ['study-sessions'], queryFn: studyService.list })
-
-  const logSession = useMutation({
-    mutationFn: studyService.create,
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['study-stats'] })
-      queryClient.invalidateQueries({ queryKey: ['study-sessions'] })
-    },
+  const { data: stats, refetch: refetchStats } = useQuery({
+    queryKey: ['study-stats'],
+    queryFn: studyService.stats,
   })
 
-  const reset = useCallback(() => {
-    setIsRunning(false)
-    setSeconds(isBreak ? BREAK_MINUTES * 60 : POMODORO_MINUTES * 60)
-  }, [isBreak])
+  // Estrellas fijas (estilo pixel) para el fondo nocturno
+  const stars = useMemo(
+    () => Array.from({ length: 45 }, () => ({
+      top: Math.random() * 90,
+      left: Math.random() * 98,
+      size: Math.random() < 0.3 ? 3 : 2,
+    })),
+    [],
+  )
 
   useEffect(() => {
-    if (!isRunning) return
-    if (!startedAtRef.current && !isBreak) startedAtRef.current = new Date().toISOString()
+    localStorage.setItem('pomodoro', JSON.stringify(settings))
+  }, [settings])
 
-    const id = setInterval(() => {
-      setSeconds((s) => {
-        if (s <= 1) {
-          setIsRunning(false)
-          // Un bloque de estudio completado → registrar sesión
-          if (!isBreak) {
-            logSession.mutate({
-              specialtyId: specialtyId || undefined,
-              durationMinutes: POMODORO_MINUTES,
-              sessionType: 'POMODORO',
-              startedAt: startedAtRef.current ?? undefined,
-              endedAt: new Date().toISOString(),
-            })
-            startedAtRef.current = null
-          }
-          setIsBreak((b) => !b)
-          return isBreak ? POMODORO_MINUTES * 60 : BREAK_MINUTES * 60
-        }
-        return s - 1
-      })
-    }, 1000)
+  // Si no está corriendo, el tiempo sigue a la duración del modo actual
+  useEffect(() => {
+    if (!running) setSecondsLeft(settings.durations[mode] * 60)
+  }, [mode, settings.durations, running])
+
+  // Tick
+  useEffect(() => {
+    if (!running) return
+    const id = setInterval(() => setSecondsLeft((s) => Math.max(0, s - 1)), 1000)
     return () => clearInterval(id)
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isRunning, isBreak, specialtyId])
+  }, [running])
 
-  const minutes = Math.floor(seconds / 60)
-  const secs = seconds % 60
-  const progress = isBreak
-    ? ((BREAK_MINUTES * 60 - seconds) / (BREAK_MINUTES * 60)) * 100
-    : ((POMODORO_MINUTES * 60 - seconds) / (POMODORO_MINUTES * 60)) * 100
+  // Fin del temporizador
+  useEffect(() => {
+    if (secondsLeft !== 0 || !running) return
+    audioRef.current?.play().catch(() => {})
+    if (!settings.muteNotifications && 'Notification' in window && Notification.permission === 'granted') {
+      new Notification('MedPrep', { body: mode === 'pomodoro' ? '¡Pomodoro terminado! Toma un descanso.' : '¡Descanso terminado! A estudiar.' })
+    }
+    if (mode === 'pomodoro') {
+      studyService.create({ durationMinutes: settings.durations.pomodoro, sessionType: 'POMODORO' })
+        .then(() => refetchStats()).catch(() => {})
+      switchTo('short', settings.autoStartBreaks)
+    } else {
+      switchTo('pomodoro', settings.autoStartPomodoros)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [secondsLeft, running])
+
+  const switchTo = (m: Mode, autostart: boolean) => {
+    setMode(m)
+    setSecondsLeft(settings.durations[m] * 60)
+    setRunning(autostart)
+  }
+
+  const start = () => {
+    if (!settings.muteNotifications && 'Notification' in window && Notification.permission === 'default') {
+      Notification.requestPermission()
+    }
+    setRunning(true)
+  }
+
+  const reset = () => {
+    setRunning(false)
+    setSecondsLeft(settings.durations[mode] * 60)
+  }
+
+  const mm = String(Math.floor(secondsLeft / 60)).padStart(2, '0')
+  const ss = String(secondsLeft % 60).padStart(2, '0')
+  const night = running
+
+  const setDuration = (m: Mode, v: number) =>
+    setSettings((s) => ({ ...s, durations: { ...s.durations, [m]: Math.max(1, Math.min(180, v || 1)) } }))
 
   return (
-    <div className="space-y-8">
+    <div className="mx-auto max-w-xl space-y-6">
       <div>
-        <h1 className="text-2xl font-bold">Workspace</h1>
-        <p className="text-muted-foreground">Organiza tu sesión de estudio</p>
+        <h1 className="text-2xl font-bold">Pomodoro</h1>
+        <p className="text-muted-foreground">Enfócate con bloques de tiempo. Esta semana: {stats?.minutesThisWeek ?? 0} min.</p>
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-[1fr_320px]">
-        {/* Pomodoro */}
-        <div className="flex flex-col items-center rounded-xl border bg-card p-10 shadow-sm">
-          <div className="mb-2 flex items-center gap-2 text-sm font-medium text-muted-foreground">
-            <Timer className="h-4 w-4" />
-            {isBreak ? 'Descanso' : 'Estudio'}
-          </div>
-
-          <div className="relative my-6 h-48 w-48">
-            <svg className="h-full w-full -rotate-90" viewBox="0 0 100 100">
-              <circle cx="50" cy="50" r="44" fill="none" stroke="hsl(var(--muted))" strokeWidth="8" />
-              <circle
-                cx="50" cy="50" r="44" fill="none"
-                stroke={isBreak ? '#16a34a' : 'hsl(var(--primary))'}
-                strokeWidth="8" strokeLinecap="round"
-                strokeDasharray={`${2 * Math.PI * 44}`}
-                strokeDashoffset={`${2 * Math.PI * 44 * (1 - progress / 100)}`}
-                className="transition-all duration-1000"
-              />
-            </svg>
-            <div className="absolute inset-0 flex flex-col items-center justify-center">
-              <span className="text-4xl font-bold tabular-nums">
-                {String(minutes).padStart(2, '0')}:{String(secs).padStart(2, '0')}
-              </span>
-            </div>
-          </div>
-
-          <select
-            value={specialtyId}
-            onChange={(e) => setSpecialtyId(e.target.value)}
-            className="mb-4 rounded-lg border px-3 py-1.5 text-sm"
-          >
-            <option value="">Sin especialidad</option>
-            {specialties?.map((s) => (
-              <option key={s.id} value={s.id}>{s.name}</option>
-            ))}
-          </select>
-
-          <div className="flex gap-3">
-            <button
-              onClick={() => setIsRunning((r) => !r)}
-              className={cn(
-                'flex items-center gap-2 rounded-lg px-6 py-2.5 font-medium',
-                isBreak ? 'bg-green-600 text-white' : 'bg-primary text-primary-foreground',
-              )}
-            >
-              {isRunning ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4" />}
-              {isRunning ? 'Pausar' : 'Iniciar'}
-            </button>
-            <button
-              onClick={reset}
-              className="flex items-center gap-2 rounded-lg border px-4 py-2.5 font-medium text-muted-foreground hover:bg-accent"
-            >
-              <RotateCcw className="h-4 w-4" />
-            </button>
-          </div>
-
-          <p className="mt-4 text-xs text-muted-foreground">
-            {isBreak ? 'Descansa 10 minutos antes del próximo bloque' : '50 min de estudio concentrado'}
-          </p>
-        </div>
-
-        {/* Panel lateral */}
-        <div className="space-y-6">
-          <div className="rounded-xl border bg-card p-6 shadow-sm">
-            <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
-              <Clock className="h-4 w-4" /> Esta semana
-            </div>
-            <p className="mt-2 text-3xl font-bold">
-              {Math.floor((stats?.minutesThisWeek ?? 0) / 60)}h {(stats?.minutesThisWeek ?? 0) % 60}m
-            </p>
-            <p className="text-xs text-muted-foreground">tiempo de estudio registrado</p>
-          </div>
-
-          <div className="rounded-xl border bg-card p-6 shadow-sm">
-            <h2 className="mb-3 font-semibold">Sesiones recientes</h2>
-            {(sessions?.length ?? 0) === 0 ? (
-              <p className="text-sm text-muted-foreground">
-                Aún no registras sesiones. Completa un bloque Pomodoro para empezar.
-              </p>
-            ) : (
-              <ul className="space-y-2">
-                {sessions!.slice(0, 6).map((s) => (
-                  <li key={s.id} className="flex items-center justify-between text-sm">
-                    <span className="text-muted-foreground">
-                      {new Date(s.startedAt).toLocaleDateString('es-PE', { day: '2-digit', month: 'short' })}
-                      {s.specialtyName ? ` · ${s.specialtyName}` : ''}
-                    </span>
-                    <span className="font-medium">{s.durationMinutes} min</span>
-                  </li>
-                ))}
-              </ul>
+      {/* Selector de modo */}
+      <div className="flex justify-center gap-2">
+        {(Object.keys(LABELS) as Mode[]).map((m) => (
+          <button
+            key={m}
+            onClick={() => { setMode(m); setRunning(false) }}
+            className={cn(
+              'rounded-lg px-3 py-1.5 text-sm font-medium transition-colors',
+              mode === m ? 'bg-primary text-primary-foreground' : 'bg-secondary text-secondary-foreground hover:bg-accent',
             )}
-          </div>
+          >
+            {LABELS[m]}
+          </button>
+        ))}
+      </div>
+
+      {/* Temporizador (fondo nocturno al correr) */}
+      <div className={cn('relative overflow-hidden rounded-2xl border p-10 text-center transition-colors',
+        night ? 'border-slate-700 bg-slate-950' : 'bg-card')}>
+        {night && stars.map((st, i) => (
+          <span key={i} className="absolute rounded-[1px] bg-white/90"
+            style={{ top: `${st.top}%`, left: `${st.left}%`, width: st.size, height: st.size }} />
+        ))}
+        {night && <div className="absolute bottom-0 left-0 right-0 h-6 bg-slate-800" />}
+        <div className={cn('relative font-mono text-7xl font-bold tabular-nums', night && 'text-white')}>
+          {mm}:{ss}
+        </div>
+        <div className="relative mt-6 flex justify-center gap-3">
+          <button onClick={running ? () => setRunning(false) : start}
+            className="flex items-center gap-2 rounded-lg bg-primary px-6 py-2.5 font-medium text-primary-foreground">
+            {running ? <><Pause className="h-4 w-4" /> Pausar</> : <><Play className="h-4 w-4" /> Iniciar</>}
+          </button>
+          <button onClick={reset}
+            className={cn('flex items-center gap-2 rounded-lg border px-4 py-2.5 text-sm', night && 'border-slate-600 text-white')}>
+            <RotateCcw className="h-4 w-4" /> Reiniciar
+          </button>
         </div>
       </div>
+
+      {/* Configuración */}
+      <div className="space-y-4 rounded-xl border bg-card p-6 shadow-sm">
+        <h3 className="font-semibold">Configuración</h3>
+        <div className="grid grid-cols-3 gap-3">
+          {(Object.keys(LABELS) as Mode[]).map((m) => (
+            <label key={m} className="text-sm">
+              <span className="mb-1 block text-muted-foreground">{LABELS[m]} (min)</span>
+              <input type="number" min={1} max={180} value={settings.durations[m]}
+                onChange={(e) => setDuration(m, Number(e.target.value))}
+                className="w-full rounded-lg border px-3 py-2 text-sm" />
+            </label>
+          ))}
+        </div>
+        <Switch label="Auto-iniciar descansos" checked={settings.autoStartBreaks}
+          onChange={(v) => setSettings((s) => ({ ...s, autoStartBreaks: v }))} />
+        <Switch label="Auto-iniciar pomodoros" checked={settings.autoStartPomodoros}
+          onChange={(v) => setSettings((s) => ({ ...s, autoStartPomodoros: v }))} />
+        <Switch label="Silenciar notificaciones de escritorio" checked={settings.muteNotifications}
+          onChange={(v) => setSettings((s) => ({ ...s, muteNotifications: v }))} />
+      </div>
+
+      <audio ref={audioRef} src="/bell.mp3" preload="auto" />
     </div>
+  )
+}
+
+function Switch({ label, checked, onChange }: { label: string; checked: boolean; onChange: (v: boolean) => void }) {
+  return (
+    <button onClick={() => onChange(!checked)} className="flex w-full items-center justify-between text-sm">
+      <span>{label}</span>
+      <span className={cn('relative h-6 w-11 rounded-full transition-colors', checked ? 'bg-primary' : 'bg-muted')}>
+        <span className={cn('absolute top-0.5 h-5 w-5 rounded-full bg-white transition-transform', checked ? 'left-0.5 translate-x-5' : 'left-0.5')} />
+      </span>
+    </button>
   )
 }
