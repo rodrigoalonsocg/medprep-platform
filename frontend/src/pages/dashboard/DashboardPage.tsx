@@ -25,7 +25,13 @@ export default function DashboardPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold">Hola, {profile?.fullName?.split(' ')[0]} 👋</h1>
+        <h1 className="text-2xl font-bold">
+          {(() => {
+            const first = profile?.fullName?.trim().split(' ')[0] ?? ''
+            const title = /a$/i.test(first) ? 'Dra.' : 'Dr.'
+            return first ? `Hola ${title} ${first}` : 'Hola'
+          })()} 👋
+        </h1>
         <p className="text-muted-foreground">Resumen de tu preparación para el internado</p>
       </div>
 
